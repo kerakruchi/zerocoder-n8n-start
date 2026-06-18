@@ -1,0 +1,198 @@
+{
+  "name": "Complaint Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "0b92c25d-c6cc-43ae-9654-c66567d779b5",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        816,
+        16
+      ],
+      "webhookId": "complaint-bot-webhook-001",
+      "credentials": {
+        "telegramApi": {
+          "id": "JCRCmyRpP2pnkBNZ",
+          "name": "Telegram account 16"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "cond-1",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "/start",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3822c45e-ebb6-45ef-b1d2-8700c69d08c0",
+      "name": "Is /start?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1024,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "Здравствуйте! 👋\n\nОпишите, пожалуйста, вашу проблему одним сообщением. Мы зарегистрируем обращение и свяжемся с вами.",
+        "additionalFields": {}
+      },
+      "id": "cbab0f9a-115d-43cb-be34-cdd8f670a305",
+      "name": "Send Greeting",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1264,
+        -112
+      ],
+      "webhookId": "cb87c007-d2eb-41a7-955f-187f33f4ced4",
+      "credentials": {
+        "telegramApi": {
+          "id": "JCRCmyRpP2pnkBNZ",
+          "name": "Telegram account 16"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://app.nocodb.com/api/v2/tables/mjrtyhji75kk9zc/records",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "xc-token",
+              "value": "REPLACE_WITH_NOCODB_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"Complaint\": {{ JSON.stringify($json.message.text) }},\n  \"Username\": {{ JSON.stringify($json.message.from.username || $json.message.from.first_name || 'unknown') }},\n  \"ChatId\": {{ $json.message.chat.id }},\n  \"Created At\": {{ JSON.stringify(new Date().toISOString()) }}\n}",
+        "options": {}
+      },
+      "id": "5799f1e7-a13c-4f31-b56d-a187840fd626",
+      "name": "Save to NocoDB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1264,
+        128
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "6fZCgFjfPQGU4OqX",
+          "name": "Header Auth account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "✅ Жалоба принята!|Мы свяжемся с вами в ближайшее время.",
+        "additionalFields": {}
+      },
+      "id": "72a066cc-3af7-4a3c-a1b9-492d6bb07865",
+      "name": "Send Confirmation",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1488,
+        128
+      ],
+      "webhookId": "6a31e40b-e83c-44fc-b47e-01b84d6af791",
+      "credentials": {
+        "telegramApi": {
+          "id": "JCRCmyRpP2pnkBNZ",
+          "name": "Telegram account 16"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Is /start?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is /start?": {
+      "main": [
+        [
+          {
+            "node": "Send Greeting",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save to NocoDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to NocoDB": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "edee2e5a-dad6-466c-980d-97ff3046c498",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "457651bd60e16129273cf775c145fc0a586d0924d924c91b5828a7cce5912325"
+  },
+  "id": "vCrkgQeg91vCGer-ZG7eK",
+  "tags": []
+}
