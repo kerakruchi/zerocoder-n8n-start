@@ -1,0 +1,221 @@
+{
+  "name": "GigaChat HTTP — тест промпта",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "6967213c-f0d4-4844-ba9b-88fa3ff0acf4",
+      "name": "Запустить",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        256,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "system_prompt",
+              "value": "Ты дружелюбный AI-ассистент. Отвечай кратко, на русском.",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "user_prompt",
+              "value": "Привет! Объясни в двух предложениях, что такое n8n.",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "model",
+              "value": "GigaChat",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "temperature",
+              "value": 0.7,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "13ad9ca9-e9df-421a-93fd-34147079d375",
+      "name": "Параметры промпта",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ngw.devices.sberbank.ru:9443/api/v2/oauth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic "
+            },
+            {
+              "name": "RqUID",
+              "value": "=9d77b14c-1f55-4b9f-9f8a-1234567890ab"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "scope",
+              "value": "GIGACHAT_API_PERS"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "6b92276f-8cd1-42c7-bd91-8162db0ce67d",
+      "name": "Получить токен",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        704,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gigachat.devices.sberbank.ru/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $('Параметры промпта').item.json.model }}\",\n  \"messages\": [\n    { \"role\": \"system\", \"content\": \"{{ $('Параметры промпта').item.json.system_prompt }}\" },\n    { \"role\": \"user\", \"content\": \"{{ $('Параметры промпта').item.json.user_prompt }}\" }\n  ],\n  \"temperature\": {{ $('Параметры промпта').item.json.temperature }},\n  \"max_tokens\": 512\n}",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "623be67a-89b2-433f-b5a2-8928c4c73857",
+      "name": "Отправить промпт",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        928,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r1",
+              "name": "ответ",
+              "value": "={{ $json.choices[0].message.content }}",
+              "type": "string"
+            },
+            {
+              "id": "r2",
+              "name": "токенов_использовано",
+              "value": "={{ $json.usage.total_tokens }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "57bdc07f-b8d9-4022-abd9-22ede7a215d8",
+      "name": "Ответ",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1136,
+        -208
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Запустить": {
+      "main": [
+        [
+          {
+            "node": "Параметры промпта",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Параметры промпта": {
+      "main": [
+        [
+          {
+            "node": "Получить токен",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Получить токен": {
+      "main": [
+        [
+          {
+            "node": "Отправить промпт",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Отправить промпт": {
+      "main": [
+        [
+          {
+            "node": "Ответ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "8ffff820-c138-4c4b-a5ea-cf8f78c8b980",
+  "meta": {
+    "instanceId": "457651bd60e16129273cf775c145fc0a586d0924d924c91b5828a7cce5912325"
+  },
+  "id": "kvbYaTAUoQ0JqPA63zaxS",
+  "tags": []
+}
