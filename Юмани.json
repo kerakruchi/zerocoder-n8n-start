@@ -1,0 +1,195 @@
+{
+  "name": "Юмани",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "eda664b8-2e58-4836-89ee-183c02b4af1e",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "18b80fb3-419a-4ffa-b9de-51f8e8ce2b1e",
+              "name": "receiver",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "95428e33-6e6a-4c53-81d4-a7a0e93903f2",
+              "name": "quickpayForm",
+              "value": "shop",
+              "type": "string"
+            },
+            {
+              "id": "0bbde680-9e26-406f-a364-f52e83da5221",
+              "name": "targets",
+              "value": "Тестовая оплата урока",
+              "type": "string"
+            },
+            {
+              "id": "c0e1a552-860b-467f-a0cc-d946d7078878",
+              "name": "paymentType",
+              "value": "AC",
+              "type": "string"
+            },
+            {
+              "id": "771f5638-d59d-4ed1-a242-50bae19ebe74",
+              "name": "sum",
+              "value": "10",
+              "type": "string"
+            },
+            {
+              "id": "7c483bbf-694a-43de-a763-5e5afe59a333",
+              "name": "label",
+              "value": "lesson-demo-1",
+              "type": "string"
+            },
+            {
+              "id": "7cf24c2b-8db4-44b7-a0e9-c91e22ce7e98",
+              "name": "successURL",
+              "value": "https://example.com/success",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "f7adadf4-21dc-448f-8f7f-2b3a80fee7a3",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://yoomoney.ru/quickpay/confirm.xml",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "receiver",
+              "value": "={{ $('Edit Fields').item.json.receiver }}"
+            },
+            {
+              "name": "quickpay-form",
+              "value": "={{ $('Edit Fields').item.json.quickpayForm }}"
+            },
+            {
+              "name": "targets",
+              "value": "={{ $('Edit Fields').item.json.targets }}"
+            },
+            {
+              "name": "paymentType",
+              "value": "={{ $('Edit Fields').item.json.paymentType }}"
+            },
+            {
+              "name": "sum",
+              "value": "={{ $('Edit Fields').item.json.sum }}"
+            },
+            {
+              "name": "label",
+              "value": "={{ $('Edit Fields').item.json.label }}"
+            },
+            {
+              "name": "successURL",
+              "value": "={{ $('Edit Fields').item.json.successURL }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "3b0411f7-30c2-4f8e-8fd3-28be71b485f4",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fd0fc983-3fc5-4958-ae5a-b93f31197b9a",
+              "name": "paymentUrl",
+              "value": "=https://yoomoney.ru/quickpay/confirm.xml?receiver={{ $('Edit Fields').item.json.receiver }}&quickpay-form=shop&targets={{ encodeURIComponent($('Edit Fields').item.json.targets) }}&paymentType=AC&sum={{ $('Edit Fields').item.json.sum }}&label={{ $('Edit Fields').item.json.label }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        0
+      ],
+      "id": "52a9cdb6-39e9-4806-88ff-2d8379e18c15",
+      "name": "Edit Fields1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "faeb9e05-a355-4d26-b5eb-27eb8c218549",
+  "meta": {
+    "instanceId": "21e5194fb4548d766b96ebd333779b8063508b9c6aadeed69cb0d8bbe7d15985"
+  },
+  "nodeGroups": [],
+  "id": "qOdPAWHKgVb89Y92",
+  "tags": []
+}
