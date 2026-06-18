@@ -1,0 +1,306 @@
+{
+  "name": "Урок 4 - демо циклы",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        96
+      ],
+      "id": "d9685ef6-f824-4c71-8e9f-94917a24404f",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5846348b-6355-4ccb-9e03-c9b9d29ae668",
+              "name": "name",
+              "value": "Анна",
+              "type": "string"
+            },
+            {
+              "id": "96c7fa00-6dd7-4bd6-b3d4-c99954900ecb",
+              "name": "course",
+              "value": "n8n",
+              "type": "string"
+            },
+            {
+              "id": "b52362cf-985e-4bdd-a298-1638c912351f",
+              "name": "paid",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        0
+      ],
+      "id": "47c2bb21-69f5-4d2b-a2b7-ab6a64110a46",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5846348b-6355-4ccb-9e03-c9b9d29ae668",
+              "name": "name",
+              "value": "Иван",
+              "type": "string"
+            },
+            {
+              "id": "96c7fa00-6dd7-4bd6-b3d4-c99954900ecb",
+              "name": "course",
+              "value": "AI",
+              "type": "string"
+            },
+            {
+              "id": "b52362cf-985e-4bdd-a298-1638c912351f",
+              "name": "paid",
+              "value": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        192
+      ],
+      "id": "09707c26-e088-4edd-a31b-112ff9932544",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5846348b-6355-4ccb-9e03-c9b9d29ae668",
+              "name": "name",
+              "value": "Мария",
+              "type": "string"
+            },
+            {
+              "id": "96c7fa00-6dd7-4bd6-b3d4-c99954900ecb",
+              "name": "course",
+              "value": "n8n",
+              "type": "string"
+            },
+            {
+              "id": "b52362cf-985e-4bdd-a298-1638c912351f",
+              "name": "paid",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        384
+      ],
+      "id": "e41bb023-5342-4885-9709-accb0a122be3",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        544,
+        176
+      ],
+      "id": "f90b7427-820e-4dcf-be89-0d4f7fb689fe",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1625b94e-07ec-48c0-b427-1a6262c2d2d1",
+              "leftValue": "={{ $json.paid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        768,
+        192
+      ],
+      "id": "8251b2b8-fb4b-42c9-906e-95ca30d885cb",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        976,
+        192
+      ],
+      "id": "d68c4f1d-bc2e-4af6-bb3e-11875b66046e",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "name": "Replace Me",
+      "typeVersion": 1,
+      "position": [
+        1184,
+        400
+      ],
+      "id": "b92c2e44-f435-4af0-89a9-5b2c4dcff034",
+      "placeholder": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Replace Me",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace Me": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "acdeea50-ac1f-4f41-8ff1-9999956fe9af",
+  "meta": {
+    "instanceId": "21e5194fb4548d766b96ebd333779b8063508b9c6aadeed69cb0d8bbe7d15985"
+  },
+  "nodeGroups": [],
+  "id": "ASgp6oDvrm0Qad4B",
+  "tags": []
+}
