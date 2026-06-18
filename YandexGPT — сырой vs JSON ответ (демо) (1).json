@@ -1,0 +1,367 @@
+{
+  "name": "YandexGPT — сырой vs JSON ответ (демо)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "29817c99-7bf0-4c4d-8a3a-640e6ea5dd65",
+      "name": "Запустить",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -928,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "p1",
+              "name": "input_text",
+              "value": "Я заказал товар три недели назад через ваш сайт, оплатил картой полную стоимость, но до сих пор ничего не пришло! Поддержка не отвечает на письма уже неделю. Верните деньги или буду подавать в суд!",
+              "type": "string"
+            },
+            {
+              "id": "p2",
+              "name": "folder_id",
+              "value": "b1gpjvjed10gv3frbgcc",
+              "type": "string"
+            },
+            {
+              "id": "p3",
+              "name": "model_uri",
+              "value": "=gpt://b1gpjvjed10gv3frbgcc/yandexgpt-lite/latest",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2ba465e0-4a93-480e-84fb-fa8148c0f277",
+      "name": "Параметры",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -704,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://llm.api.cloud.yandex.net/foundationModels/v1/completion",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Api-Key "
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"modelUri\": \"{{ $('Параметры').item.json.model_uri }}\",\n  \"completionOptions\": {\n    \"stream\": false,\n    \"temperature\": 0.3,\n    \"maxTokens\": \"500\"\n  },\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"text\": \"Ты ассистент службы поддержки. Проанализируй обращение клиента и дай развёрнутый комментарий: что произошло, насколько серьёзно, что делать дальше.\"\n    },\n    {\n      \"role\": \"user\",\n      \"text\": \"{{ $('Параметры').item.json.input_text }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "c7d749cb-7520-4fb5-9296-8b4f8d1a6d8e",
+      "name": "YandexGPT — человеческий ответ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -448,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "h1",
+              "name": "ответ_текстом",
+              "value": "={{ $json.result.alternatives[0].message.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e2c70d6e-6750-4506-807d-2c7ea8f8ad0a",
+      "name": "Сырой ответ",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -208,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://llm.api.cloud.yandex.net/foundationModels/v1/completion",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Api-Key "
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"modelUri\": \"{{ $('Параметры').item.json.model_uri }}\",\n  \"completionOptions\": {\n    \"stream\": false,\n    \"temperature\": 0.1,\n    \"maxTokens\": \"500\"\n  },\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"text\": \"Ты классификатор обращений клиентов. Проанализируй обращение и верни ответ СТРОГО в формате JSON без какого-либо другого текста, без markdown-обёртки, без пояснений. Структура: {\\\"severity\\\": \\\"low|medium|high|critical\\\", \\\"category\\\": \\\"delivery|quality|payment|service|other\\\", \\\"summary\\\": \\\"одно предложение что произошло\\\", \\\"suggested_action\\\": \\\"что должен сделать оператор\\\"}\"\n    },\n    {\n      \"role\": \"user\",\n      \"text\": \"{{ $('Параметры').item.json.input_text }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "3533200c-ace8-4f7b-84dd-20b2d4311319",
+      "name": "YandexGPT — JSON ответ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -448,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Берём текст из ответа YandexGPT\nconst raw = $input.first().json.result.alternatives[0].message.text;\n\n// Иногда модель оборачивает JSON в ```json ... ``` — чистим\nlet cleaned = raw.trim();\nif (cleaned.startsWith('```')) {\n  cleaned = cleaned.replace(/^```(?:json)?\\s*/i, '').replace(/```\\s*$/, '').trim();\n}\n\n// Парсим JSON в реальный объект\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (err) {\n  throw new Error('Модель вернула не валидный JSON: ' + raw);\n}\n\n// Возвращаем поля как обычные ключи — теперь к ним можно обращаться $json.severity и т.д.\nreturn [{ json: parsed }];"
+      },
+      "id": "5e01cd8d-a9af-4b74-ae45-9222b8ab8da7",
+      "name": "Распарсить JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a477faf5-5ecf-4a12-800b-59aaa2aca847",
+              "leftValue": "={{ $json.severity }}",
+              "rightValue": "high",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "d142c2b1-597e-456a-9a1a-b50afcad8876",
+              "leftValue": "={{ $json.severity }}",
+              "rightValue": "critical",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "4c777cec-7a1a-4d82-9f5d-a00db1c3d26b",
+      "name": "severity = high?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        32,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "статус",
+              "value": "🚨 Эскалация — старшему оператору",
+              "type": "string"
+            },
+            {
+              "id": "e2",
+              "name": "категория",
+              "value": "={{ $('Распарсить JSON').item.json.category }}",
+              "type": "string"
+            },
+            {
+              "id": "e3",
+              "name": "суть",
+              "value": "={{ $('Распарсить JSON').item.json.summary }}",
+              "type": "string"
+            },
+            {
+              "id": "e4",
+              "name": "действие",
+              "value": "={{ $('Распарсить JSON').item.json.suggested_action }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bce005e2-0fe3-4e29-9cb6-a4212a19e3e8",
+      "name": "Высокий приоритет",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        272,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "статус",
+              "value": "✉️ Обычная очередь",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "категория",
+              "value": "={{ $('Распарсить JSON').item.json.category }}",
+              "type": "string"
+            },
+            {
+              "id": "s3",
+              "name": "суть",
+              "value": "={{ $('Распарсить JSON').item.json.summary }}",
+              "type": "string"
+            },
+            {
+              "id": "s4",
+              "name": "действие",
+              "value": "={{ $('Распарсить JSON').item.json.suggested_action }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c0d43b8e-0f67-4dec-9f56-168aee83a71c",
+      "name": "Стандартная обработка",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        272,
+        288
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Запустить": {
+      "main": [
+        [
+          {
+            "node": "Параметры",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Параметры": {
+      "main": [
+        [
+          {
+            "node": "YandexGPT — человеческий ответ",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "YandexGPT — JSON ответ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YandexGPT — человеческий ответ": {
+      "main": [
+        [
+          {
+            "node": "Сырой ответ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YandexGPT — JSON ответ": {
+      "main": [
+        [
+          {
+            "node": "Распарсить JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Распарсить JSON": {
+      "main": [
+        [
+          {
+            "node": "severity = high?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "severity = high?": {
+      "main": [
+        [
+          {
+            "node": "Высокий приоритет",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Стандартная обработка",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "24b3459a-3a3e-4d81-849f-617a7a2501dd",
+  "meta": {
+    "instanceId": "457651bd60e16129273cf775c145fc0a586d0924d924c91b5828a7cce5912325"
+  },
+  "id": "JMQp0T6NH_p93Q4PiU1fM",
+  "tags": []
+}
