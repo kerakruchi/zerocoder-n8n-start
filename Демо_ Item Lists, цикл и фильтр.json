@@ -1,0 +1,461 @@
+{
+  "name": "Демо: Item Lists, цикл и фильтр",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c9e06c66-41a5-421b-a8be-b4c1d8bdb475",
+      "name": "Запустить демо",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Источник вернул ОДНУ запись с массивом клиентов внутри.\n// Так часто работают API: один response → пачка объектов в поле data/customers/items.\n\nreturn [{\n  json: {\n    batchId: \"batch-2026-06-09-001\",\n    receivedAt: new Date().toISOString(),\n    customers: [\n      { id: 1, name: \"Анна Петрова\",      phone: \"+7 916 123-45-67\", source: \"сайт\" },\n      { id: 2, name: \"Иван Сидоров\",      phone: \"\",                  source: \"сайт\" },\n      { id: 3, name: \"Мария Иванова\",     phone: \"+7 925 987-65-43\", source: \"instagram\" },\n      { id: 4, name: \"Олег Кузнецов\",     phone: \"+7 903 555-12-34\", source: \"сайт\" },\n      { id: 5, name: \"Елена Смирнова\",    phone: \"\",                  source: \"telegram\" },\n      { id: 6, name: \"Дмитрий Новиков\",   phone: \"+7 905 222-33-44\", source: \"сайт\" },\n      { id: 7, name: \"Светлана Морозова\", phone: \"+7 962 111-22-33\", source: \"instagram\" },\n      { id: 8, name: \"Павел Орлов\",       phone: null,                source: \"telegram\" }\n    ]\n  }\n}];"
+      },
+      "id": "3b013fbf-d18d-4e77-84f8-db6a39a9fc8a",
+      "name": "Источник: пачка клиентов",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "customers",
+        "options": {
+          "destinationFieldName": "",
+          "includeBinary": false
+        }
+      },
+      "id": "3d8b63aa-ab06-4a12-a537-73a09d67065d",
+      "name": "Item Lists: развернуть массив",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        272,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 2,
+        "options": {}
+      },
+      "id": "5ec70f40-2818-4aca-b8e6-7a646725901a",
+      "name": "Цикл: по 2 клиента",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        496,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "e2",
+              "name": "name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "e3",
+              "name": "phone",
+              "value": "={{ $json.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "e4",
+              "name": "source",
+              "value": "={{ $json.source }}",
+              "type": "string"
+            },
+            {
+              "id": "e5",
+              "name": "greeting",
+              "value": "=Здравствуйте, {{ $json.name.split(' ')[0] }}!",
+              "type": "string"
+            },
+            {
+              "id": "e6",
+              "name": "processedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "90679737-597e-4653-94b1-be5532d97808",
+      "name": "Персонализация",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        720,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.phone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d53af4a5-7b8c-4e1f-927b-bdb51ff2e011",
+      "name": "Есть телефон?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        944,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1",
+              "name": "status",
+              "value": "✅ В обработку",
+              "type": "string"
+            },
+            {
+              "id": "b2",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "b3",
+              "name": "name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "b4",
+              "name": "phone",
+              "value": "={{ $json.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "b5",
+              "name": "greeting",
+              "value": "={{ $json.greeting }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d3a9f720-d23b-4ea7-a953-acf68589a243",
+      "name": "✅ Принять",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1168,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r1",
+              "name": "status",
+              "value": "⏭ Пропустить: нет телефона",
+              "type": "string"
+            },
+            {
+              "id": "r2",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "r3",
+              "name": "name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d47134cf-6c4e-4f6e-b07d-d9f9634115c1",
+      "name": "⏭ Пропустить",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1168,
+        320
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "7d684060-a1be-4a65-8f11-a98151b00252",
+      "name": "Собрать ветки",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1392,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "status",
+              "value": "🏁 Все клиенты обработаны",
+              "type": "string"
+            },
+            {
+              "id": "f2",
+              "name": "batchId",
+              "value": "={{ $json.batchId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "da207c24-8a64-4267-b156-432c4eb6ee0f",
+      "name": "🏁 Готово",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        720,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 📦 Источник\n\nВернул **ОДНУ** запись с массивом клиентов внутри.\n\nТипичная история: API/Webhook отдаёт всю пачку одним response.\n\nСмотрим в правую панель: **1 item**, внутри поле `customers` = массив из 8 объектов.",
+        "height": 240,
+        "width": 280,
+        "color": 5
+      },
+      "id": "e4004be7-719f-4265-8fec-b7e7e4c0e946",
+      "name": "Sticky: Источник",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 📋 Item Lists (Split Out)\n\n**Разворачивает массив в N отдельных items.**\n\nБыло: 1 item с полем `customers: [...]`\nСтало: 8 items, каждый — отдельный клиент.\n\nТеперь n8n может обрабатывать каждого клиента как самостоятельную единицу.",
+        "height": 260,
+        "width": 300,
+        "color": 4
+      },
+      "id": "f4ac808b-d94d-445c-8c8a-ab7aaf8e6244",
+      "name": "Sticky: Item Lists",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        48,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🔁 Loop Over Items\n\n**Цикл по частям.** Batch size = 2 — обрабатываем по 2 клиента за итерацию.\n\nЗачем не сразу всё:\n• rate limit у внешнего API (не больше N запросов в секунду)\n• тяжёлые операции — не хочется грузить всё в память\n• видно прогресс «по шагам»\n\nВыход **loop** → тело цикла. Выход **done** → когда всё закончилось.",
+        "height": 300,
+        "width": 320,
+        "color": 6
+      },
+      "id": "8f7d1010-3de0-4426-922a-9a781e7b3b32",
+      "name": "Sticky: Цикл",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        384,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ⚙️ Тело цикла\n\nЗдесь делаем то, что нужно **для каждого клиента**:\n1. Персонализируем приветствие\n2. Фильтруем по наличию телефона\n3. Принимаем или пропускаем\n\nПосле обработки ветки сливаются (Merge) и возвращаются ко входу Loop — следующая итерация.",
+        "height": 260,
+        "width": 320,
+        "color": 3
+      },
+      "id": "1ca07bba-44ef-4a6c-8231-8b77026ef3d5",
+      "name": "Sticky: Тело цикла",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        912,
+        528
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Запустить демо": {
+      "main": [
+        [
+          {
+            "node": "Источник: пачка клиентов",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Источник: пачка клиентов": {
+      "main": [
+        [
+          {
+            "node": "Item Lists: развернуть массив",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Item Lists: развернуть массив": {
+      "main": [
+        [
+          {
+            "node": "Цикл: по 2 клиента",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Цикл: по 2 клиента": {
+      "main": [
+        [
+          {
+            "node": "🏁 Готово",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Персонализация",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Персонализация": {
+      "main": [
+        [
+          {
+            "node": "Есть телефон?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Есть телефон?": {
+      "main": [
+        [
+          {
+            "node": "✅ Принять",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⏭ Пропустить",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Принять": {
+      "main": [
+        [
+          {
+            "node": "Собрать ветки",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏭ Пропустить": {
+      "main": [
+        [
+          {
+            "node": "Собрать ветки",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Собрать ветки": {
+      "main": [
+        [
+          {
+            "node": "Цикл: по 2 клиента",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "de9eea2a-06f9-47d1-ab38-1440ffe0f75a",
+  "meta": {
+    "instanceId": "21e5194fb4548d766b96ebd333779b8063508b9c6aadeed69cb0d8bbe7d15985"
+  },
+  "nodeGroups": [],
+  "id": "e1lN9i5TnRx7sDy2",
+  "tags": []
+}
