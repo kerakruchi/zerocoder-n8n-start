@@ -1,0 +1,252 @@
+{
+  "name": "Демо: приём заявки через форму n8n",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🧪 Как протестировать (для демо)\n\n1. Открой ноду **«Заявка с формы»**\n2. Скопируй **Test URL** (большая кнопка внизу настроек)\n3. Нажми **«Listen for test event»** — n8n ждёт сабмит\n4. Открой Test URL в новой вкладке браузера → увидишь форму\n5. Заполни и отправь → поля прилетят в ноду в реальном времени\n6. В n8n правая панель покажет, что пришло\n\n**В production:** активируй workflow (тоггл справа сверху). Production URL работает 24/7, форма всегда доступна.",
+        "height": 380,
+        "width": 380,
+        "color": 6
+      },
+      "id": "adc6585f-8ea0-4dab-80cd-5b2936212a4f",
+      "name": "Sticky: Как тестить",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 📨 Что прилетело\n\nПосле сабмита формы — справа в панели увидишь все поля:\n\n• `Имя`, `Телефон`, `Email`, `Сообщение`, `Источник` — то, что заполнил пользователь\n• `submittedAt` — время отправки\n• `formMode` — `test` или `production`\n\nЭта нода **Edit Fields** просто перекладывает русские заголовки в латинские имена — так удобнее в дальнейшем сценарии (CRM, базы, API).",
+        "height": 320,
+        "width": 340,
+        "color": 4
+      },
+      "id": "515cf326-aef6-49d5-a666-ab6516d3712d",
+      "name": "Sticky: Что прилетело",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        320,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 📝 Form Trigger — встроенная форма n8n\n\n**Webhook — это просто адрес, на который шлют данные. Здесь n8n даёт нам и адрес, и саму форму — всё в одном.**\n\nЧто увидишь, когда откроешь ноду:\n\n• **Test URL** — пока учимся. Работает только когда нажал «Listen for test event».\n• **Production URL** — рабочий, в бою. Сработает, только когда сценарий **активирован** (тоггл сверху справа).\n\nЭто две разные ссылки на одну и ту же форму.",
+        "height": 320,
+        "width": 360,
+        "color": 5
+      },
+      "id": "5247f63c-3298-4699-995d-5d565a6495e9",
+      "name": "Sticky: Форма",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "name",
+              "value": "={{ $json['Имя'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f2",
+              "name": "phone",
+              "value": "={{ $json['Телефон'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f3",
+              "name": "email",
+              "value": "={{ $json['Email'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f4",
+              "name": "message",
+              "value": "={{ $json['Сообщение'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f5",
+              "name": "source",
+              "value": "={{ $json['Источник'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f6",
+              "name": "receivedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0f94ab77-34e8-4bd0-b824-a1b1c817c936",
+      "name": "Что мы получили",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        352,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Заявка на консультацию",
+        "formDescription": "Оставьте свои контакты — мы свяжемся с вами в ближайшее время",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Имя",
+              "placeholder": "Анна Петрова",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Телефон",
+              "placeholder": "+7 916 123-45-67",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "placeholder": "anna@example.com"
+            },
+            {
+              "fieldLabel": "Сообщение",
+              "fieldType": "textarea",
+              "placeholder": "Расскажите, чем мы можем помочь"
+            },
+            {
+              "fieldLabel": "Источник",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Сайт"
+                  },
+                  {
+                    "option": "Instagram"
+                  },
+                  {
+                    "option": "Telegram"
+                  },
+                  {
+                    "option": "Сарафан"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f65eb3c4-48f2-4214-a421-d92ac51648cd",
+      "name": "Заявка с формы",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        48,
+        368
+      ],
+      "webhookId": "972afd6f-875d-42ce-8bcf-2c3ccc02d8fa"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8080/api/v2/tables/mkhx1k073qs2e8o/records",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $json.name }}"
+            },
+            {
+              "name": "phone",
+              "value": "={{ $json.phone }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $json.email }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "source",
+              "value": "={{ $json.source }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        560,
+        368
+      ],
+      "id": "cb8d63e1-2a07-41d4-8df9-aa95a8e1be65",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "4OFaM7awbyi7SoB0",
+          "name": "Header Auth account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Заявка с формы": {
+      "main": [
+        [
+          {
+            "node": "Что мы получили",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Что мы получили": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "ec738741-29c5-408e-aa37-d8e3fa0d0124",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "21e5194fb4548d766b96ebd333779b8063508b9c6aadeed69cb0d8bbe7d15985"
+  },
+  "nodeGroups": [],
+  "id": "quKGnnQoJhgJ1Inq",
+  "tags": []
+}
