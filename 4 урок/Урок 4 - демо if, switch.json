@@ -1,0 +1,737 @@
+{
+  "name": "Урок 4 - демо if, switch",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "140ba2f7-44ad-4557-91f0-d399456b1dc1",
+      "name": "Start Sorting",
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [
+        -3312,
+        864
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### Учебный сценарий: Логика маршрутизации данных (Merge, IF, Switch)\n\nДобро пожаловать!\n\nВ этом сценарии мы познакомимся с тремя ключевыми нодами, которые управляют движением данных внутри автоматизации.\n\nАналогия: обработка входящих заявок\n\n• Заявки — это данные, которые проходят через процесс.\n• Merge — объединяет несколько потоков данных в один.\n• IF — простая развилка с двумя направлениями.\n• Switch — маршрутизатор с несколькими вариантами дальнейшего пути.\n\nКак работать с этим примером:\n\n1. Нажмите «Execute Workflow».\n2. Последовательно переходите по нодам слева направо.\n3. Открывайте результаты выполнения каждой ноды и наблюдайте, как меняется поток данных.\n4. Читайте пояснения на стикерах рядом с нодами.\n\nЦель упражнения:\n\nПонять, как объединять данные, проверять условия и направлять разные записи по разным сценариям обработки.\n",
+        "height": 660,
+        "width": 624
+      },
+      "id": "68496a0e-abdc-4772-9759-d4ba32d3a86d",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -3792,
+        384
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 1. Нода Merge\n\n**Аналогия:** Представьте несколько потоков заявок, которые поступают из разных источников и затем объединяются в один общий поток для дальнейшей обработки.\n\n**Что делает нода:** Merge объединяет данные из нескольких веток workflow в единый поток данных.\n\nВ этом примере используется режим **Append** («Добавить»). Нода дожидается данных из всех входящих веток, после чего передаёт их дальше вместе.\n\n**На что обратить внимание:** Откройте результат выполнения ноды. Теперь данные из обеих веток находятся в одном списке и готовы к дальнейшей обработке.\n\n**Практический пример:** одна ветка может содержать заявки с сайта, а другая — заявки из Telegram. После Merge все заявки собираются в общий поток, где их можно обрабатывать по единым правилам.\n",
+        "height": 604,
+        "width": 384,
+        "color": 4
+      },
+      "id": "d5fa3bac-fcb7-468c-809c-6a55fe1fe74a",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2704,
+        288
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 2. Нода IF\n\n**Аналогия:** Представьте развилку на дороге. Каждая запись подъезжает к точке проверки, после чего система решает, по какому пути её отправить.\n\n**Что делает нода:** IF проверяет заданное условие и разделяет данные на две ветки.\n\nЕсли условие выполняется — запись попадает в ветку **True** (верхний выход).\n\nЕсли условие не выполняется — запись попадает в ветку **False** (нижний выход).\n\nВ этом примере мы проверяем простой вопрос:\n\n**«Заявка оплачена?»**\n\nЕсли статус заявки равен «Оплачено», она отправляется в ветку True.\n\nЕсли статус отличается от «Оплачено», заявка попадает в ветку False.\n\n**На что обратить внимание:** После запуска workflow откройте результаты выполнения ноды. Вы увидите, что оплаченные заявки автоматически ушли в одну ветку, а неоплаченные — в другую.\n\n**Практический пример:** оплаченных клиентов можно сразу отправлять в обучение, а тем, кто ещё не оплатил, автоматически отправлять напоминание.\n",
+        "height": 596,
+        "width": 384,
+        "color": 4
+      },
+      "id": "9a49c1ee-038e-4246-a144-9085869ca240",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2288,
+        288
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "12345",
+              "name": "handling_instructions",
+              "type": "string",
+              "value": "Осторожно, хрупкое!"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "07a20afd-f345-4f99-9d43-73bb0c437e9f",
+      "name": "Add 'Fragile' Handling",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -1808,
+        768
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "12345",
+              "name": "handling_instructions",
+              "type": "string",
+              "value": "Стандартная перевозка"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "d0afbcec-6d1b-4f89-941b-6d832e87b054",
+      "name": "Add 'Standard' Handling",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -1808,
+        960
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "content": "### 3. Повторное объединение данных (Merge)\n\n**Зачем здесь ещё одна нода Merge?**\n\nНа предыдущем шаге нода IF разделила данные на две разные ветки.\n\nЧасть записей ушла в ветку **True**, а часть — в ветку **False**.\n\nНо следующий этап обработки должен выполняться для всех записей сразу. Поэтому перед продолжением работы нам нужно снова собрать данные в единый поток.\n\nИменно для этого используется вторая нода Merge.\n\n**Что происходит:** Merge принимает данные из обеих веток и объединяет их обратно в один общий поток.\n\n**На что обратить внимание:** После выполнения ноды вы снова увидите все записи в одном месте, независимо от того, через какую ветку они прошли ранее.\n\n**Очень распространённый шаблон в n8n:**\n\nРазделить данные → Выполнить разную обработку → Объединить обратно\n\nИли коротко:\n\n**Split → Process → Merge**\n\n**Практический пример:** оплаченным клиентам можно отправить доступ к курсу, а неоплаченным — напоминание об оплате. После выполнения этих действий обе группы клиентов можно снова объединить и передать на следующий этап процесса.\n",
+        "height": 552,
+        "width": 384,
+        "color": 5
+      },
+      "id": "8226dc73-7902-404a-aba1-4bac3b8740fc",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1616,
+        272
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 4. Нода Switch\n\n**Аналогия:** Представьте перекрёсток с несколькими направлениями. В зависимости от значения поля каждая запись автоматически отправляется по своему маршруту.\n\n**Что делает нода:** Switch проверяет значение одного поля и направляет данные в одну из нескольких веток.\n\nВ отличие от IF, который может выбрать только между двумя вариантами, Switch позволяет обрабатывать сразу несколько сценариев.\n\nВ этом примере мы анализируем поле **«Тип заявки»**.\n\n* Если тип = «Курс», заявка отправляется в первую ветку.\n* Если тип = «Консультация», заявка отправляется во вторую ветку.\n* Если тип = «Корпоративное обучение», заявка отправляется в третью ветку.\n* Если значение не соответствует ни одному из условий, запись попадёт в ветку **По умолчанию (Default)**.\n\n**На что обратить внимание:** После запуска workflow откройте результаты выполнения каждой ветки. Вы увидите, что разные заявки автоматически распределились по своим маршрутам.\n\n**Преимущество Switch:** Вместо цепочки из нескольких IF можно использовать одну ноду Switch. Схема получается компактнее, понятнее и проще в поддержке.\n\nКлючевая идея:\n\n**IF — это развилка на две дороги.**\n\n**Switch — это перекрёсток на несколько дорог.**\n\nВыбор зависит от того, сколько вариантов развития процесса существует в вашем сценарии.\n",
+        "height": 776,
+        "width": 400,
+        "color": 4
+      },
+      "id": "aa62e82a-2f27-402a-83c2-664a531f119d",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1200,
+        48
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "12345",
+              "name": "sorting_bin",
+              "type": "string",
+              "value": "A1 (Лондон)"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "94173ab8-be78-4c31-9b84-540e21ab63f0",
+      "name": "Send to London Bin",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -656,
+        576
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "12345",
+              "name": "sorting_bin",
+              "type": "string",
+              "value": "B2 (Нью-Йорк)"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "d1069193-124b-4476-ac7e-1492b39d2f9a",
+      "name": "Send to New York Bin",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -656,
+        768
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "12345",
+              "name": "sorting_bin",
+              "type": "string",
+              "value": "C3 (Токио)"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "fa4aa557-15bb-4fe2-b8da-8b66d6fdd5e7",
+      "name": "Send to Tokyo Bin",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -656,
+        960
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "12345",
+              "name": "sorting_bin",
+              "type": "string",
+              "value": "Вернуть отправителю"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "0e6d1345-29ab-40d5-871e-b24b9cff9599",
+      "name": "Default Bin",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -656,
+        1152
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {},
+      "id": "2a58e4c5-c2dd-4015-b31b-712bcad8b771",
+      "name": "Final Sorted Packages",
+      "type": "n8n-nodes-base.noOp",
+      "position": [
+        -272,
+        880
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### Поздравляем! Маршрутизация данных выполнена\n\nВы успешно познакомились с тремя ключевыми нодами логики в n8n и увидели, как данные могут автоматически перемещаться по разным сценариям обработки.\n\nЧто мы изучили:\n\n• **Merge** — объединяет данные из разных источников в единый поток.\n\n• **IF** — помогает принимать простые решения по принципу «Да / Нет» или «Условие выполнено / не выполнено».\n\n• **Switch** — позволяет распределять данные по нескольким маршрутам в зависимости от значения выбранного поля.\n\nПочему это важно?\n\nПрактически любая бизнес-автоматизация строится на этих принципах. Заявки клиентов, обращения в поддержку, заказы, лиды, документы и AI-процессы — всё это требует принятия решений и маршрутизации данных.\n\nЗапомните простую схему:\n\n**Собрали данные → Проверили условия → Направили по нужному сценарию**\n\nОсвоив Merge, IF и Switch, вы получите фундамент для создания более сложных автоматизаций в n8n: от CRM-процессов до AI-агентов и корпоративных workflow.\n\nЭто три ноды, которые используются практически в каждом реальном проекте.\n",
+        "height": 688,
+        "width": 368,
+        "color": 6
+      },
+      "id": "d51c8bdf-ee35-4936-ad57-8f97cf389e12",
+      "name": "Sticky Note5",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -304,
+        112
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "8d43cde4-027a-4ca7-a24c-6f74f12d6238",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.destination }}",
+                    "rightValue": "Лондон"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Лондон"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "399a0fbd-6be5-48e9-9f66-04cf385cb418",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.destination }}",
+                    "rightValue": "Нью-Йорк"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Нью-Йорк"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a69d387d-a174-42b3-bc5f-c8b46b7c2375",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.destination }}",
+                    "rightValue": "Токио"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Токио"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Default"
+        }
+      },
+      "id": "9a91a670-eb17-496a-ad5a-db40f5ffba79",
+      "name": "3. Switch Node",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        -1040,
+        832
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "12345",
+              "name": "package_id",
+              "type": "string",
+              "value": "L-001"
+            },
+            {
+              "id": "67890",
+              "name": "type",
+              "type": "string",
+              "value": "письмо"
+            },
+            {
+              "id": "abcde",
+              "name": "destination",
+              "type": "string",
+              "value": "Лондон"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "df9a2e6f-bbe1-42af-9b99-03e601e10048",
+      "name": "Create Letter",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -2928,
+        672
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "76c13831-55f9-4e19-b2e3-9acfca29a742",
+      "name": "1. Merge Node",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        -2560,
+        848
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a68aad83-1d09-4ebe-9732-aaedc407bb4b",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.is_fragile }}",
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "1ca7ae1e-aaf2-4070-88e7-c3c3d28b6184",
+      "name": "2. IF Node",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        -2160,
+        864
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {},
+      "id": "ba995223-1db8-42cd-96b2-ff01af662634",
+      "name": "Re-group All Packages",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        -1472,
+        864
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "12345",
+              "name": "package_id",
+              "type": "string",
+              "value": "L-002"
+            },
+            {
+              "id": "67890",
+              "name": "type",
+              "type": "string",
+              "value": "письмо"
+            },
+            {
+              "id": "abcde",
+              "name": "destination",
+              "type": "string",
+              "value": "Токио"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3dcc97a8-0475-440e-a6e7-56fcc0220ecb",
+      "name": "Create 2nd Letter",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -2928,
+        864
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "12345",
+              "name": "package_id",
+              "type": "string",
+              "value": "P-001"
+            },
+            {
+              "id": "67890",
+              "name": "type",
+              "type": "string",
+              "value": "посылка"
+            },
+            {
+              "id": "abcde",
+              "name": "destination",
+              "type": "string",
+              "value": "Нью-Йорк"
+            },
+            {
+              "id": "fghij",
+              "name": "is_fragile",
+              "type": "boolean",
+              "value": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7c0ac65d-52b0-4cea-a0ef-a0f790e4f4b9",
+      "name": "Create Parcel",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -2928,
+        1056
+      ],
+      "typeVersion": 3.4
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "2. IF Node": {
+      "main": [
+        [
+          {
+            "node": "Add 'Fragile' Handling",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add 'Standard' Handling",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Bin": {
+      "main": [
+        [
+          {
+            "node": "Final Sorted Packages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. Merge Node": {
+      "main": [
+        [
+          {
+            "node": "2. IF Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Letter": {
+      "main": [
+        [
+          {
+            "node": "1. Merge Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Parcel": {
+      "main": [
+        [
+          {
+            "node": "1. Merge Node",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Start Sorting": {
+      "main": [
+        [
+          {
+            "node": "Create Parcel",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create 2nd Letter",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Switch Node": {
+      "main": [
+        [
+          {
+            "node": "Send to London Bin",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to New York Bin",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to Tokyo Bin",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Default Bin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create 2nd Letter": {
+      "main": [
+        [
+          {
+            "node": "1. Merge Node",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Send to Tokyo Bin": {
+      "main": [
+        [
+          {
+            "node": "Final Sorted Packages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to London Bin": {
+      "main": [
+        [
+          {
+            "node": "Final Sorted Packages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to New York Bin": {
+      "main": [
+        [
+          {
+            "node": "Final Sorted Packages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-group All Packages": {
+      "main": [
+        [
+          {
+            "node": "3. Switch Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add 'Fragile' Handling": {
+      "main": [
+        [
+          {
+            "node": "Re-group All Packages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add 'Standard' Handling": {
+      "main": [
+        [
+          {
+            "node": "Re-group All Packages",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "cd400cc2-a448-48ab-bf59-a10edcd03ddc",
+  "meta": {
+    "instanceId": "21e5194fb4548d766b96ebd333779b8063508b9c6aadeed69cb0d8bbe7d15985"
+  },
+  "nodeGroups": [],
+  "id": "tYgVAVeBdXegUIQS",
+  "tags": []
+}
