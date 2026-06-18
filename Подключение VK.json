@@ -1,0 +1,74 @@
+{
+  "name": "My workflow 2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "90b2b7ce-159b-4197-9a1f-839a34598b4e",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "https://api.vk.com/method/groups.getById",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "group_id",
+              "value": "236789481"
+            },
+            {
+              "name": "access_token",
+              "value": "vk1.a.ss25rvlacU4PFwtVHvRIALN3UBlQpvdxi-O6lALO6IAkdUeGwH1r9Oez9cKKkA-6Kq8aFn8nOe6ZMAICpS-Hh9Hln-6nGsGF1QUD6ddGuk_rZNb4CxlHyi72_sFS53iXwtUxRk9Og136dcIFVgkGXjUxsQ_nBAmk5w3_eBWvVGUD9UMp3Y9kTNUHXT6-ERvl1koc_8EQy5mlUUf14eYO8Q"
+            },
+            {
+              "name": "v",
+              "value": "5.199"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "780d185b-642e-4716-b57c-8c96d0790fb3",
+      "name": "HTTP Request"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "3d82177d-7ed5-439b-ba52-2e153b1d64d3",
+  "meta": {
+    "instanceId": "21e5194fb4548d766b96ebd333779b8063508b9c6aadeed69cb0d8bbe7d15985"
+  },
+  "nodeGroups": [],
+  "id": "CDI5QQBC9pA4VfEg",
+  "tags": []
+}
