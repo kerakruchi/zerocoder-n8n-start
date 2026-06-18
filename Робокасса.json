@@ -1,0 +1,210 @@
+{
+  "name": "Робокасса",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "37b36a2a-c86d-4e98-a37c-1ca7b0d4116f",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a5eb199a-4691-46d9-8909-75aa86536b1e",
+              "name": "merchantLogin",
+              "value": "custdevicaurururu",
+              "type": "string"
+            },
+            {
+              "id": "0d63e7c2-a315-4f1e-ae8b-4ad4a8ec4f0a",
+              "name": "outSum",
+              "value": "100",
+              "type": "string"
+            },
+            {
+              "id": "d416aadb-4b77-4fa2-b551-b20d1ce3153b",
+              "name": "invId",
+              "value": "1",
+              "type": "string"
+            },
+            {
+              "id": "2800ec2a-563e-4b0d-9688-25c577ddd17f",
+              "name": "description",
+              "value": "Тестовый платеж",
+              "type": "string"
+            },
+            {
+              "id": "f42240e7-a8a4-4354-8f99-55d9a3e31fb8",
+              "name": "password1",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "3b76ddfb-17db-49e0-9829-114af9f91898",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "type": "MD5",
+        "value": "={{ $json.merchantLogin }}:{{ $json.outSum }}:{{ $json.invId }}:{{ $json.password1 }}",
+        "dataPropertyName": "signature"
+      },
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "34e6d04e-5f39-4316-9ff8-ec5908d9712b",
+      "name": "Crypto"
+    },
+    {
+      "parameters": {
+        "url": "https://auth.robokassa.ru/Merchant/Index.aspx",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "MerchantLogin",
+              "value": "={{ $('Edit Fields').item.json.merchantLogin }}"
+            },
+            {
+              "name": "OutSum",
+              "value": "={{ $('Edit Fields').item.json.outSum }}"
+            },
+            {
+              "name": "InvId",
+              "value": "={{ $('Edit Fields').item.json.invId }}"
+            },
+            {
+              "name": "Description",
+              "value": "={{ $('Edit Fields').item.json.description }}"
+            },
+            {
+              "name": "SignatureValue",
+              "value": "={{ $json.signature }}"
+            },
+            {
+              "name": "IsTest",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        0
+      ],
+      "id": "424b240f-b49f-4967-8817-142d07ef9723",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ddaf565b-013d-4618-a2a7-290ffeedfa0f",
+              "name": "paymentUrl",
+              "value": "=https://auth.robokassa.ru/Merchant/Index.aspx?MerchantLogin={{ $('Edit Fields').item.json.merchantLogin }}&OutSum={{ $('Edit Fields').item.json.outSum }}&InvId={{ $('Edit Fields').item.json.invId }}&SignatureValue={{ $('Crypto').item.json.signature }}&IsTest=1",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        832,
+        0
+      ],
+      "id": "9354d171-cbd7-4e35-b812-904c04afc11f",
+      "name": "Edit Fields1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Crypto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crypto": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "e17f09b6-7d7a-4fb2-8914-e3471e6452d8",
+  "meta": {
+    "instanceId": "21e5194fb4548d766b96ebd333779b8063508b9c6aadeed69cb0d8bbe7d15985"
+  },
+  "nodeGroups": [],
+  "id": "qBBCrHQpTzCpDLcq",
+  "tags": []
+}
