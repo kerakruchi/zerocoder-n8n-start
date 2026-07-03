@@ -1,0 +1,610 @@
+{
+  "name": "Урок — Заявка → ИИ → Я.Диск → ЮMoney (HTTP)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "demo-struktura",
+        "options": {}
+      },
+      "id": "440fb727-1a8a-4abe-9c80-175dea31b77b",
+      "name": "Webhook — прием заявки",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        672,
+        1568
+      ],
+      "webhookId": "demo-struktura-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c01",
+              "leftValue": "={{ $json.body.name }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c02",
+              "leftValue": "={{ $json.body.contact }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c03",
+              "leftValue": "={{ $json.body.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c04",
+              "leftValue": "={{ $json.body.service }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c05",
+              "leftValue": "={{ $json.body.amount }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c06",
+              "leftValue": "={{ $json.body.message }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "feb9b891-e062-4d06-aa65-8d5e95f79a45",
+      "name": "If — валидация полей",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        1568
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gigachat.devices.sberbank.ru/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"GigaChat\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Ты — помощник по обработке входящих заявок.\\n\\nТвоя задача: проанализировать данные заявки и вернуть структурированный результат в формате JSON.\\n\\nСтруктура JSON:\\n{\\n  \\\"client_name\\\": \\\"имя клиента\\\",\\n  \\\"contact\\\": \\\"телефон или иной контакт\\\",\\n  \\\"email\\\": \\\"адрес электронной почты\\\",\\n  \\\"request_type\\\": \\\"короткая категория запроса\\\",\\n  \\\"request_summary\\\": \\\"1-2 предложения, резюме обращения\\\",\\n  \\\"payment_description\\\": \\\"короткое описание услуги для счёта\\\",\\n  \\\"amount\\\": \\\"сумма как строка, без выдумок\\\",\\n  \\\"priority\\\": \\\"high | medium | low\\\"\\n}\\n\\nПравила:\\n- не выдумывай сумму, сроки, скидки и условия;\\n- если данных не хватает, укажи значение \\\"требуется уточнение\\\";\\n- пиши кратко и без рекламных формулировок;\\n- сохраняй русский язык;\\n- верни ТОЛЬКО валидный JSON без markdown-обёртки и без пояснений.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Данные заявки:\\nИмя: {{ $json.body.name }}\\nКонтакт: {{ $json.body.contact }}\\nАдрес электронной почты: {{ $json.body.email }}\\nУслуга: {{ $json.body.service }}\\nСумма: {{ $json.body.amount }}\\nКомментарий клиента: {{ $json.body.message }}\\n\\nПроанализируй заявку и верни структурированный JSON по схеме выше.\"\n    }\n  ],\n  \"temperature\": 0.2,\n  \"max_tokens\": 800,\n  \"stream\": false\n}",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "b38cd8e8-a95e-4042-902a-186ed4aa999e",
+      "name": "GigaChat — структурный анализ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1232,
+        1424
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "kib90IGG5R2jHgXP",
+          "name": "Header Auth account 11"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Парсинг JSON от ИИ + проверка на галлюцинации\n// Цель: убедиться, что ИИ не выдумал и не исказил данные\n\nconst aiResponse = $json.choices[0].message.content;\n\n// 1. Чистим возможную markdown-обёртку ```json ... ```\nconst cleaned = aiResponse\n  .replace(/^```(json)?\\s*/i, '')\n  .replace(/\\s*```$/, '')\n  .trim();\n\n// 2. Парсим JSON\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  return [{\n    json: {\n      success: false,\n      error: 'Не удалось распарсить JSON от ИИ',\n      parse_error: e.message,\n      raw_ai_response: aiResponse\n    }\n  }];\n}\n\n// 3. Получаем исходные данные заявки\nconst original = $('Webhook — прием заявки').item.json.body;\n\n// 4. Проверки целостности\nconst requiredFields = [\n  'client_name', 'contact', 'email', 'request_type',\n  'request_summary', 'payment_description', 'amount', 'priority'\n];\nconst missingFields = requiredFields.filter(f => !(f in parsed));\n\nconst checks = {\n  has_all_required_fields: missingFields.length === 0,\n  missing_fields: missingFields,\n  amount_unchanged: String(parsed.amount).trim() === String(original.amount).trim(),\n  email_unchanged: parsed.email === original.email,\n  contact_unchanged: parsed.contact === original.contact,\n  priority_valid: ['high', 'medium', 'low'].includes(parsed.priority)\n};\n\nconst allPassed = checks.has_all_required_fields\n  && checks.amount_unchanged\n  && checks.email_unchanged\n  && checks.contact_unchanged\n  && checks.priority_valid;\n\n// 5. Финальный результат\nreturn [{\n  json: {\n    success: true,\n    data: parsed,\n    validation: {\n      ...checks,\n      all_checks_passed: allPassed,\n      original_amount: original.amount,\n      ai_amount: parsed.amount\n    }\n  }\n}];"
+      },
+      "id": "567779f0-3b44-47d5-b3b1-37f007f7bfa0",
+      "name": "Code — парсинг и проверка",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        1424
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e01",
+              "name": "success",
+              "value": "=false",
+              "type": "boolean"
+            },
+            {
+              "id": "e02",
+              "name": "error",
+              "value": "Заявка не прошла валидацию: одно или несколько обязательных полей пусты",
+              "type": "string"
+            },
+            {
+              "id": "e03",
+              "name": "received_body",
+              "value": "={{ $('Webhook — прием заявки').item.json.body }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "280c8f7a-9bf0-44fb-b10e-38f1d92e14f9",
+      "name": "Set — ошибка валидации",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1232,
+        1744
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 📋 Тестовые данные\n\n**Body для POST на тестовый URL:**\n\n```\n{\n  \"name\": \"Анна\",\n  \"contact\": \"+7 900 000-00-00\",\n  \"email\": \"anna.test@example.com\",\n  \"service\": \"консультация по автоматизации\",\n  \"amount\": \"1500\",\n  \"message\": \"Хочу понять, как автоматизировать заявки с сайта и сразу отправлять клиенту ссылку на оплату.\"\n}\n```\n\n**Что показать студентам:**\n- Заявка содержит **финансовые данные** (`amount`) — это меняет правила игры. ИИ не должен их трогать\n- В тестовом примере все поля заполнены — попробуйте позже **удалить одно поле** и посмотреть, как сработает валидация на входе\n\n💡 Pin data есть на всех нодах — Execute workflow проходит цепочку без реальных вызовов.",
+        "height": 792,
+        "width": 320,
+        "color": 6
+      },
+      "id": "ce20c62f-44e2-4c50-aad2-86a540a555e1",
+      "name": "Sticky — тестовые данные",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        512,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ✅ Валидация ВХОДА\n\n**Зачем:** до вызова ИИ убедиться, что заявка пригодна к обработке. Дешевле и быстрее, чем ловить ошибку после.\n\n**Проверяем:** все 6 полей заявки непустые:\n- name, contact, email, service, amount, message\n\n**Логика:** AND по всем условиям\n\n**Что произойдёт, если поле пустое:**\n- TRUE-ветка не сработает\n- Управление уйдёт в FALSE-ветку → нода Set с структурированной ошибкой\n- ИИ не вызывается → не тратится токен и время\n\n**Где это полезно в проде:**\nWebhook принимает что угодно с сайта. Форма может быть сломана, бот может отправить мусор, злоумышленник — пробросить пустые поля. If-нода на входе — это первая линия защиты пайплайна.",
+        "height": 792,
+        "width": 280,
+        "color": 5
+      },
+      "id": "7559046c-ec91-47d8-bdd7-291256575d4a",
+      "name": "Sticky — валидация входа",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        848,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🤖 GigaChat — структурированный анализ\n\n**Ключевое отличие от прошлого урока:**\nИИ возвращает **JSON**, а не свободный текст. Это другая педагогика — мы используем модель как **парсер + классификатор**, а не как генератор контента.\n\n**В промпте обязательно:**\n1. Точная схема JSON с описанием каждого поля\n2. Правила: \"не выдумывай\", \"если не хватает — требуется уточнение\"\n3. **«верни ТОЛЬКО валидный JSON без markdown»** — без этой строчки модель часто оборачивает ответ в ```json ... ```\n\n**temperature: 0.2** — ещё ниже, чем в предыдущем уроке. Для структурного парсинга креативность не просто не нужна, а **вредна**: чем выше temperature, тем выше шанс, что модель «улучшит» данные.\n\n**Авторизация:**\n- Credentials → Header Auth → `Bearer <access_token>`\n- Токен живёт ~30 мин\n- `Allow Unauthorized Certificates: ON`",
+        "height": 856,
+        "width": 320,
+        "color": 4
+      },
+      "id": "49401e82-dea8-4df7-b1ef-83a25708a47b",
+      "name": "Sticky — GigaChat",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1152,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🔍 Валидация ВЫХОДА (Code node)\n\n**Зачем:** даже с хорошим промптом ИИ может галлюцинировать — изменить сумму, придумать поле, поменять формат email. Этот узел ловит такие случаи **до** того, как данные попадут в CRM/счёт/CRM.\n\n**Что делает Code-нода:**\n\n1. **Чистит markdown-обёртку** — если модель всё же завернула JSON в ```json ... ```, регекс убирает обёртку\n2. **Парсит JSON** через `JSON.parse` — если не валидный JSON, возвращает понятную ошибку с raw-ответом\n3. **Сверяет с исходными данными:**\n   - `amount` не изменилась\n   - `email` не изменился\n   - `contact` не изменился\n   - `priority` — только из списка high/medium/low\n4. **Проверяет полноту** — все 8 обязательных полей присутствуют\n\n**Выход ноды:**\n```\n{\n  \"success\": true,\n  \"data\": { ...распарсенный JSON... },\n  \"validation\": {\n    \"all_checks_passed\": true,\n    \"amount_unchanged\": true,\n    \"email_unchanged\": true,\n    ...\n  }\n}\n```\n\n**Куда это идёт дальше (в следующих уроках):**\n- Если `all_checks_passed: true` — данные в CRM\n- Если `false` — в ручную модерацию + уведомление менеджеру\n\n⚠️ Code-нода — единственное место в этом воркфлоу, где есть JavaScript. Для no-code курса можно показать это как «вот граница: до этого момента всё кликом, дальше нужна минимальная логика».",
+        "height": 1292,
+        "width": 360,
+        "color": 3
+      },
+      "id": "12c40e76-cf36-4d2f-8301-d608b47f8a2a",
+      "name": "Sticky — Code-проверка",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ⚠️ Ветка ошибки валидации входа\n\n**Что попадает сюда:**\nЛюбая заявка, у которой не заполнено хотя бы одно из обязательных полей.\n\n**Что нода делает:**\nФормирует структурированный ответ об ошибке, чтобы:\n- Логи были читаемы\n- Можно было послать ответ обратно клиенту/в систему\n- В следующих уроках подключить уведомление в Telegram/Email админу\n\nВ реальном продукте сюда добавим:\n- Логирование в Sentry / лог-файл\n- Отправку алерта менеджеру\n- Возврат HTTP 400 в Webhook respond",
+        "height": 592,
+        "width": 320
+      },
+      "id": "855ed625-d16a-4df2-9baa-f715a155fa9c",
+      "name": "Sticky — ветка ошибки",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        880,
+        1904
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://cloud-api.yandex.net/v1/disk/resources/download",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "path",
+              "value": "/n8n-demo/zayavki.xlsx"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "628c552f-9c00-4a81-8997-cd4437f0d690",
+      "name": "YD1 — get download URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        1424
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "kdcHSN9n1yvSa2xV",
+          "name": "Yandex Disk — мой токен"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.href }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "3f841041-f59b-4507-af18-e85424b972c9",
+      "name": "YD2 — download xlsx",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2032,
+        1424
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "ab72ced6-3f66-47a0-817d-56ee95b74981",
+      "name": "Spreadsheet File — read",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 2,
+      "position": [
+        2288,
+        1424
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "content": "## ⚠️ Зона работы с Яндекс.Диском\n\n### Почему так сложно\nУ Яндекс.Таблиц **нет публичного API для записи строк**. Единственный путь: «скачать файл → изменить → загрузить обратно».\n\n### Что делает цепочка\n1. **HTTP — get download URL** — запрашиваем у Я.Диска временную ссылку на скачивание\n2. **HTTP — download xlsx** — качаем сам файл (бинарь)\n3. **Spreadsheet File — read** — парсим .xlsx → строки становятся items\n4. **Code — append row** — добавляем новую строку\n5. **Spreadsheet File — write** — собираем .xlsx обратно\n6. **HTTP — get upload URL** — запрашиваем ссылку для PUT, с `overwrite=true`\n7. **HTTP — PUT upload** — заливаем новый файл\n\n### ❗ Серьёзные ограничения\n- **Race conditions:** если две заявки приходят одновременно, вторая может перезаписать первую (одна потеряется). Для одиночных демо ок, для прода — нет.\n- **Скорость:** каждая запись = полная пересборка файла. С 10 строками — 1 секунда. С 10000 — минуты.\n- **Размер файла:** Яндекс.Диск разрешает до 10 ГБ, но n8n упадёт по памяти задолго до этого.\n- **Нет атомарности:** если процесс упадёт на середине, можно потерять и старые, и новые данные.\n\n### Когда это **оправдано**\n- Заказчик категорически хочет именно Яндекс.Таблицы\n- Объём заявок < 100 в день\n- Записи редкие (не одновременно)\n- Просто демо/обучение\n\n### Когда **НЕ оправдано**\n- Production с серьёзным объёмом\n- Несколько потоков пишут одновременно\n- Требуется быстрая выборка / поиск по таблице\n- Финансовые данные с требованием атомарности\n\n**Для прода используй настоящую БД** (Postgres) **или NocoDB**. Эта схема — компромисс под конкретные ограничения, а не «как правильно».",
+        "height": 1168,
+        "width": 600,
+        "color": 3
+      },
+      "id": "92611b5a-08cc-4292-8575-2b6522040d95",
+      "name": "Sticky — зона Яндекс.Диска",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1952,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {
+          "includeUnpaired": true
+        }
+      },
+      "id": "d153c414-88fc-4d0b-85a3-19c8e00e491f",
+      "name": "Merge — бинарь + href",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        3088,
+        1408
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Существующие строки из xlsx (могут быть пустыми)\nconst existingRows = $input.all()\n  .map(item => item.json)\n  .filter(r => r && Object.keys(r).length > 0);\n\n// Данные новой заявки из узла парсинга\nconst aiData = $('Code — парсинг и проверка').item.json.data;\n\n// Форматируем новую строку с теми же ключами, что в существующей таблице\nconst today = new Date().toISOString().split('T')[0];\n\nconst newRow = {\n  \"Дата\": today,\n  \"Имя\": aiData.client_name,\n  \"Контакт\": aiData.contact,\n  \"Адрес электронной почты\": aiData.email,\n  \"Тип заявки\": aiData.request_type,\n  \"Описание\": aiData.request_summary,\n  \"Сумма\": aiData.amount,\n  \"Статус\": \"ожидает оплату\",\n  \"Платёжная ссылка\": \"\"\n};\n\nreturn [...existingRows, newRow].map(row => ({ json: row }));"
+      },
+      "id": "bdfbc11a-a377-4c79-971b-339cfc2daf11",
+      "name": "Code — append row1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2576,
+        1424
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toFile",
+        "fileFormat": "xlsx",
+        "options": {
+          "fileName": "zayavki.xlsx",
+          "headerRow": true
+        }
+      },
+      "id": "47485ea4-f1df-493d-ad77-3433cfd5ff49",
+      "name": "Spreadsheet File — write1",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 2,
+      "position": [
+        2848,
+        1280
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://cloud-api.yandex.net/v1/disk/resources/upload",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "path",
+              "value": "/n8n-demo/zayavki.xlsx"
+            },
+            {
+              "name": "overwrite",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "811c3261-8077-4dec-9751-9722c1f4ba50",
+      "name": "YD3 — get upload URL1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2848,
+        1520
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "kdcHSN9n1yvSa2xV",
+          "name": "Yandex Disk — мой токен"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('YD3 — get upload URL1').first().json.href }}",
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "id": "3936062e-8275-4c10-b850-9dd11992c080",
+      "name": "YD4 — PUT upload xlsx1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3328,
+        1408
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook — прием заявки": {
+      "main": [
+        [
+          {
+            "node": "If — валидация полей",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If — валидация полей": {
+      "main": [
+        [
+          {
+            "node": "GigaChat — структурный анализ",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set — ошибка валидации",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GigaChat — структурный анализ": {
+      "main": [
+        [
+          {
+            "node": "Code — парсинг и проверка",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YD1 — get download URL": {
+      "main": [
+        [
+          {
+            "node": "YD2 — download xlsx",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YD2 — download xlsx": {
+      "main": [
+        [
+          {
+            "node": "Spreadsheet File — read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Spreadsheet File — read": {
+      "main": [
+        [
+          {
+            "node": "Code — append row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code — парсинг и проверка": {
+      "main": [
+        [
+          {
+            "node": "YD1 — get download URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge — бинарь + href": {
+      "main": [
+        [
+          {
+            "node": "YD4 — PUT upload xlsx1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code — append row1": {
+      "main": [
+        [
+          {
+            "node": "Spreadsheet File — write1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "YD3 — get upload URL1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Spreadsheet File — write1": {
+      "main": [
+        [
+          {
+            "node": "Merge — бинарь + href",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YD3 — get upload URL1": {
+      "main": [
+        [
+          {
+            "node": "Merge — бинарь + href",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "3784509e-84b6-438f-a1bf-b89c69cff420",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "21e5194fb4548d766b96ebd333779b8063508b9c6aadeed69cb0d8bbe7d15985"
+  },
+  "nodeGroups": [],
+  "id": "9AkkHvEJFCmT79Z9",
+  "tags": []
+}
