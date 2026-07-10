@@ -1,0 +1,342 @@
+{
+  "name": "Урок — Заявка → ИИ → Email (UniSender + Яндекс SMTP)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "demo-zayavka",
+        "options": {}
+      },
+      "id": "1dc2c87c-dd4d-4fea-b016-34567297d76a",
+      "name": "Webhook — прием заявки",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        400,
+        240
+      ],
+      "webhookId": "demo-zayavka-webhook"
+    },
+    {
+      "parameters": {
+        "content": "## 📋 Тестовые данные для демонстрации\n\n**Шаги:**\n1. Откройте ноду Webhook\n2. Скопируйте Test URL\n3. Нажмите **Listen for test event**\n4. Отправьте POST на этот URL с телом ниже (Postman / Hoppscotch / curl)\n\n**Body (JSON):**\n\n```\n{\n  \"name\": \"Анна\",\n  \"email\": \"anna.test@example.com\",\n  \"service\": \"консультация по автоматизации заявок\",\n  \"message\": \"Здравствуйте! Хочу понять, можно ли автоматизировать заявки с сайта, чтобы они сразу попадали в CRM и клиенту уходило письмо.\",\n  \"source\": \"форма на сайте\"\n}\n```\n\n💡 Если не хотите отправлять POST вручную — данные уже закреплены (pin) на ноде Webhook. Нажмите **Execute workflow** и сразу увидите структуру.",
+        "height": 760,
+        "width": 380,
+        "color": 6
+      },
+      "id": "39bdb356-bec4-4a3c-a3fa-1d5731e02cd5",
+      "name": "Sticky Note — тестовые данные",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        176,
+        -608
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "field-01",
+              "name": "client_name",
+              "value": "={{ $json.body.name }}",
+              "type": "string"
+            },
+            {
+              "id": "field-02",
+              "name": "client_email",
+              "value": "={{ $json.body.email }}",
+              "type": "string"
+            },
+            {
+              "id": "field-03",
+              "name": "request_topic",
+              "value": "={{ $json.body.service }}",
+              "type": "string"
+            },
+            {
+              "id": "field-04",
+              "name": "request_text",
+              "value": "={{ $json.body.message }}",
+              "type": "string"
+            },
+            {
+              "id": "field-05",
+              "name": "source",
+              "value": "={{ $json.body.source }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7a824e3e-f883-4dd4-87da-492768420017",
+      "name": "Edit Fields — нормализация",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        656,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🧹 Нормализация полей\n\n**Зачем этот шаг:**\nСоздаём аккуратный слой между Webhook и ИИ. Дальше в промпте будем ссылаться не на вложенные технические поля типа `$json.body.name`, а на понятные переменные.\n\n**Маппинг:**\n- `body.name` → **client_name**\n- `body.email` → **client_email**\n- `body.service` → **request_topic**\n- `body.message` → **request_text**\n- `body.source` → **source**\n\n**Что это даёт:**\n- Промпт становится читаемым: `{{ $json.client_name }}` вместо `{{ $json.body.name }}`\n- При отладке сразу видно, какие данные ушли в ИИ\n- Если форма поменяет названия полей — правка в одном месте, остальной сценарий не трогаем\n\n⚠️ Опция **Include Other Input Fields** выключена — на выход идут только эти 5 полей, без headers/params/query.",
+        "height": 764,
+        "width": 380,
+        "color": 5
+      },
+      "id": "d0469788-26bf-455b-917d-610115ebaee7",
+      "name": "Sticky Note — нормализация",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        592,
+        -608
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gigachat.devices.sberbank.ru/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"GigaChat\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Ты — помощник менеджера по клиентским заявкам.\\n\\nТвоя задача: на основе данных заявки подготовить короткое деловое письмо клиенту.\\n\\nТребования к письму:\\n- обратись к клиенту по имени;\\n- поблагодари за обращение;\\n- кратко подтверди, что мы поняли запрос;\\n- объясни следующий шаг: менеджер свяжется и уточнит детали;\\n- не обещай конкретные сроки, цены, скидки или результат;\\n- не используй капс, чрезмерные эмоции и рекламные фразы;\\n- пиши на русском языке;\\n- структура: приветствие, основной текст, следующий шаг, подпись.\\n\\nПодпись:\\nКоманда проекта\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Данные заявки:\\nИмя клиента: {{ $json.client_name }}\\nТема обращения: {{ $json.request_topic }}\\nТекст обращения: {{ $json.request_text }}\\nИсточник заявки: {{ $json.source }}\\n\\nПодготовь письмо по требованиям выше.\"\n    }\n  ],\n  \"temperature\": 0.3,\n  \"max_tokens\": 800,\n  \"stream\": false\n}",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "7abfe493-3ff5-43d4-b2cb-32a3a5a2305b",
+      "name": "GigaChat — генерация письма",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        240
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "C60zOneslYg9qSr5",
+          "name": "Header Auth account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 🤖 GigaChat — генерация письма\n\n**Что делает:**\nБерёт нормализованные поля, формирует промпт (роль + правила + структура) и отправляет в GigaChat API.\n\n**Структура промпта:**\n- **System:** роль помощника + ограничения + структура письма + подпись\n- **User:** данные заявки через `{{ $json.client_name }}` и т.д.\n- **temperature: 0.3** — низкая, для предсказуемого делового тона\n\n**Настройка авторизации (один раз):**\n1. Получить **Authorization key** в личном кабинете GigaChat (developers.sber.ru)\n2. Получить **access_token** через POST на `https://ngw.devices.sberbank.ru:9443/api/v2/oauth`\n   - Header: `Authorization: Basic <ваш key>`\n   - Header: `RqUID: <любой uuid>`\n   - Body: `scope=GIGACHAT_API_PERS`\n3. В n8n: **Credentials → New → Header Auth**\n   - Name: `Authorization`\n   - Value: `Bearer <access_token>`\n4. Подключить эту credential к ноде\n\n⚠️ **Токен живёт ~30 минут.** В production нужна отдельная нода обновления — в этом уроке упрощаем.\n\n⚠️ **SSL:** GigaChat подписан Russian Trusted Root CA. В Options включено `Allow Unauthorized Certificates`, иначе будет ошибка handshake.\n\n**Pin data:** закреплён пример ответа GigaChat — урок проходится без реального вызова API.",
+        "height": 992,
+        "width": 440,
+        "color": 4
+      },
+      "id": "46512bed-5e43-4d9c-92ef-48f5e83861e4",
+      "name": "Sticky Note — GigaChat",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1024,
+        -832
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.unisender.com/ru/api/sendEmail",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "api_key",
+              "value": "61cksjatu9u4y6f1xwwwz1jd9mzbj1t4uoygx1ye"
+            },
+            {
+              "name": "email",
+              "value": "={{ $('Edit Fields — нормализация').item.json.client_email }}"
+            },
+            {
+              "name": "sender_name",
+              "value": "Команда проекта"
+            },
+            {
+              "name": "sender_email",
+              "value": "kerakruchi@gmail.com"
+            },
+            {
+              "name": "subject",
+              "value": "=Ваша заявка принята — {{ $('Edit Fields — нормализация').item.json.request_topic }}"
+            },
+            {
+              "name": "body",
+              "value": "={{ $json.choices[0].message.content.replaceAll('\\n', '<br>') }}"
+            },
+            {
+              "name": "list_id",
+              "value": "2"
+            },
+            {
+              "name": "lang",
+              "value": "ru"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "655bdc50-5e4b-4ff4-b046-294ca31d7021",
+      "name": "UniSender — отправка письма",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1104,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ✉️ UniSender — отправка письма\n\n**Endpoint:** `POST https://api.unisender.com/ru/api/sendEmail`\n\n**Параметры (Body, form-urlencoded):**\n- `format: json` — ответ в JSON\n- `api_key` — из ЛК UniSender\n- `email` — `{{ $('Edit Fields — нормализация').item.json.client_email }}`\n- `sender_name: Команда проекта`\n- `sender_email` — **подтверждённый домен**\n- `subject` — собран из темы заявки\n- `body` — ответ GigaChat с заменой `\\n` на `<br>`\n- `list_id` — **ID списка**, обязателен (для ссылки отписки)\n- `lang: ru`\n\n**Что сделать студенту перед демо:**\n1. Зарегистрироваться на unisender.com (есть бесплатный тариф)\n2. Подтвердить домен отправителя\n3. Создать список → скопировать его ID\n4. Получить API-ключ (Настройки → API)\n5. Подставить `api_key`, `sender_email`, `list_id` в ноду\n\n**После Execute:**\n- Проверить **Входящие**\n- Обязательно проверить **«Спам»** — без прогрева домена первое письмо часто туда\n- Если код ответа не 200 или есть `error` в JSON — читаем текст ошибки\n\n⚠️ Новые аккаунты: лимит 1000 писем/сутки, размер до 1 МБ.\n\n🔒 В проде api_key прячем в Credentials (`Query Auth`), не в Body. В уроке оставлен явно для наглядности.",
+        "height": 1052,
+        "width": 420,
+        "color": 7
+      },
+      "id": "f22270eb-8ae4-40f6-bf6b-e9b9dbab189c",
+      "name": "Sticky — UniSender",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1520,
+        -896
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "valaria.kruchinina@yandex.ru",
+        "toEmail": "={{ $('Edit Fields — нормализация').item.json.client_email }}",
+        "subject": "=Ваша заявка принята — {{ $('Edit Fields — нормализация').item.json.request_topic }}",
+        "html": "={{ $json.choices[0].message.content.replaceAll('\\n', '<br>') }}",
+        "options": {}
+      },
+      "id": "0626da2a-4841-4de6-a32b-7cb48a08a37c",
+      "name": "Яндекс SMTP — отправка письма",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1120,
+        448
+      ],
+      "webhookId": "b8993e2f-14bf-4c2e-873e-e2d5d083d1ef",
+      "credentials": {
+        "smtp": {
+          "id": "uT5pSYnRHCIudCbC",
+          "name": "Yandex SMTP — моя почта"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## ✉️ Путь B: Яндекс SMTP\n\n**Что это:**\nПрямая отправка через SMTP-сервер Яндекса. Никаких списков, sender верификаций, API-ключей сервиса рассылок.\n\n**Настройка (один раз):**\n1. Включить **двухфакторку** на Яндекс ID\n2. Создать **пароль приложения**: id.yandex.ru → Безопасность → Пароли приложений → «Почта»\n3. Скопировать сгенерированный пароль (16 символов без пробелов)\n\n**Credentials в n8n:**\n- Тип: **SMTP**\n- Host: `smtp.yandex.ru`\n- Port: `465`\n- SSL/TLS: **on**\n- User: ваш полный email `you@yandex.ru`\n- Password: **пароль приложения**, НЕ обычный пароль почты\n\n**В ноде:**\n- From: ваш email (должен совпадать с логином SMTP)\n- To: `{{ $('Edit Fields — нормализация').item.json.client_email }}`\n- Subject: динамическая тема\n- Body (HTML): ответ GigaChat с `\\n` → `<br>`\n\n**Когда выбирать:**\n- Редкие и внутренние письма (до ~150/сутки)\n- Уведомления для своей команды\n- Прототипы и MVP\n\n⚠️ **Самая частая ошибка:** вписали обычный пароль вместо пароля приложения → `535 Authentication failed`. Без 2FA опция пароля приложения вообще недоступна.\n\n⚠️ Личный ящик как отправитель массовых писем — путь в спам. Для клиентских коммуникаций используем UniSender.",
+        "height": 1180,
+        "width": 380,
+        "color": 3
+      },
+      "id": "7cc6096b-0e67-4998-81f7-d35cb4de1ece",
+      "name": "Sticky — Яндекс SMTP (путь B)",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1024,
+        656
+      ]
+    }
+  ],
+  "pinData": {
+    "UniSender — отправка письма": [
+      {
+        "json": {
+          "result": {
+            "index": 0,
+            "id": "1234567890",
+            "email": "anna.test@example.com"
+          }
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook — прием заявки": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields — нормализация",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields — нормализация": {
+      "main": [
+        [
+          {
+            "node": "GigaChat — генерация письма",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GigaChat — генерация письма": {
+      "main": [
+        [
+          {
+            "node": "UniSender — отправка письма",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Яндекс SMTP — отправка письма",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "cd61a19e-24b1-43a3-a517-213d3f8234b5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "21e5194fb4548d766b96ebd333779b8063508b9c6aadeed69cb0d8bbe7d15985"
+  },
+  "nodeGroups": [],
+  "id": "w6OwM3zVpzcpdFOf",
+  "tags": []
+}
