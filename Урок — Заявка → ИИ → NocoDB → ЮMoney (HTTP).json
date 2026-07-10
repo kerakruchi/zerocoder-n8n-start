@@ -1,0 +1,1046 @@
+{
+  "name": "Урок — Заявка → ИИ → NocoDB → ЮMoney (HTTP)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## ✅ Валидация ВХОДА\n\n**Зачем:** до вызова ИИ убедиться, что заявка пригодна к обработке. Дешевле и быстрее, чем ловить ошибку после.\n\n**Проверяем:** все 6 полей заявки непустые:\n- name, contact, email, service, amount, message\n\n**Логика:** AND по всем условиям\n\n**Что произойдёт, если поле пустое:**\n- TRUE-ветка не сработает\n- Управление уйдёт в FALSE-ветку → нода Set с структурированной ошибкой\n- ИИ не вызывается → не тратится токен и время\n\n**Где это полезно в проде:**\nWebhook принимает что угодно с сайта. Форма может быть сломана, бот может отправить мусор, злоумышленник — пробросить пустые поля. If-нода на входе — это первая линия защиты пайплайна.",
+        "height": 792,
+        "width": 280,
+        "color": 5
+      },
+      "id": "e9eaccb2-6cea-4374-871d-8193b9c71a45",
+      "name": "Sticky — валидация входа",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2608,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🤖 GigaChat — структурированный анализ\n\n**Ключевое отличие от прошлого урока:**\nИИ возвращает **JSON**, а не свободный текст. Это другая педагогика — мы используем модель как **парсер + классификатор**, а не как генератор контента.\n\n**В промпте обязательно:**\n1. Точная схема JSON с описанием каждого поля\n2. Правила: \"не выдумывай\", \"если не хватает — требуется уточнение\"\n3. **«верни ТОЛЬКО валидный JSON без markdown»** — без этой строчки модель часто оборачивает ответ в ```json ... ```\n\n**temperature: 0.2** — ещё ниже, чем в предыдущем уроке. Для структурного парсинга креативность не просто не нужна, а **вредна**: чем выше temperature, тем выше шанс, что модель «улучшит» данные.\n\n**Авторизация:**\n- Credentials → Header Auth → `Bearer <access_token>`\n- Токен живёт ~30 мин\n- `Allow Unauthorized Certificates: ON`",
+        "height": 872,
+        "width": 320,
+        "color": 4
+      },
+      "id": "c998cb18-b19b-485a-9daf-b8ab21d36570",
+      "name": "Sticky — GigaChat",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2288,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🔍 Валидация ВЫХОДА (Code node)\n\n**Зачем:** даже с хорошим промптом ИИ может галлюцинировать — изменить сумму, придумать поле, поменять формат email. Этот узел ловит такие случаи **до** того, как данные попадут в CRM/счёт/CRM.\n\n**Что делает Code-нода:**\n\n1. **Чистит markdown-обёртку** — если модель всё же завернула JSON в ```json ... ```, регекс убирает обёртку\n2. **Парсит JSON** через `JSON.parse` — если не валидный JSON, возвращает понятную ошибку с raw-ответом\n3. **Сверяет с исходными данными:**\n   - `amount` не изменилась\n   - `email` не изменился\n   - `contact` не изменился\n   - `priority` — только из списка high/medium/low\n4. **Проверяет полноту** — все 8 обязательных полей присутствуют\n\n**Выход ноды:**\n```\n{\n  \"success\": true,\n  \"data\": { ...распарсенный JSON... },\n  \"validation\": {\n    \"all_checks_passed\": true,\n    \"amount_unchanged\": true,\n    \"email_unchanged\": true,\n    ...\n  }\n}\n```\n\n**Куда это идёт дальше (в следующих уроках):**\n- Если `all_checks_passed: true` — данные в CRM\n- Если `false` — в ручную модерацию + уведомление менеджеру\n\n⚠️ Code-нода — единственное место в этом воркфлоу, где есть JavaScript. Для no-code курса можно показать это как «вот граница: до этого момента всё кликом, дальше нужна минимальная логика».",
+        "height": 1304,
+        "width": 360,
+        "color": 3
+      },
+      "id": "a9e8e2d5-49ca-4a82-babb-e4fea390a3ed",
+      "name": "Sticky — Code-проверка",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1936,
+        -432
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ✅ Зона работы с NocoDB — два запроса\n\n### Что и когда пишем\n\n| # | Когда | Метод | Что делает |\n|---|---|---|---|\n| 1 | После Code-проверки | **POST** /records | Создаёт строку: данные заявки + статус `новая` |\n| 2 | После HEAD (ссылка живая) | **PATCH** /records | Записывает ссылку + меняет статус на `ожидает оплаты` |\n\n### Логика статусов\n\n- **`новая`** — заявка записана, ИИ обработал, но платёжная ссылка ещё не создана\n- **`ожидает оплаты`** — ссылка сгенерирована, прошла HEAD-проверку, записана в БД\n- *(в проде дальше)* **`оплачено`** — webhook от ЮMoney после реальной оплаты\n- *(в проде дальше)* **`отменено`** — клиент не оплатил за N дней, либо отменил вручную\n\n### Почему именно так, а не статус сразу при INSERT\n\nСемантика: статус должен отражать **актуальное состояние** записи. Если INSERT сразу пишет `ожидает оплаты`, но ссылка пустая — это ложь в БД. Любой отчёт или фильтр «дай мне все заявки со ссылкой на оплату» вернёт строку, где ссылки нет.\n\nПравильная цепочка: «записал данные → создал ссылку → проверил, что работает → обновил запись». На каждом шаге БД отражает реальность.\n\n### Зачем нужен Id строки в PATCH\n\nNocoDB не знает, какую строку обновлять, если не указать её первичный ключ. POST возвращает `{\"Id\": <n>}`. Берём этот Id через `$('NocoDB — добавить заявку').item.json.Id` и передаём в тело PATCH.\n\n### Колонки в NocoDB\n\nДолжны существовать заранее:\n`Дата`, `Имя`, `Контакт`, `Адрес электронной почты`, `Тип заявки`, `Описание`, `Сумма`, `Статус`, `Платёжная ссылка`.\n\n**Статус** делаем SingleSelect и сразу заводим варианты:\n`новая`, `ожидает оплаты`, `оплачено`, `отменено`.\n\nЕсли статусов в селекте не будет — NocoDB вернёт 400 на INSERT/PATCH.\n\n### Где взять tableId и xc-token\n\n1. **tableId**: открыть таблицу → меню справа → API Docs → скопировать ID\n2. **xc-token**: Account Settings → Tokens → Create Token → скопировать\n3. В n8n: Credentials → Header Auth → `Name: xc-token`, `Value: <токен>`",
+        "height": 1412,
+        "width": 540,
+        "color": 4
+      },
+      "id": "f3d6dbc1-d560-4044-9121-ad1ea0eb2ae3",
+      "name": "Sticky — зона NocoDB",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1536,
+        -544
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://yoomoney.ru/quickpay/confirm.xml",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "receiver",
+              "value": "={{ $json.receiver }}"
+            },
+            {
+              "name": "quickpay-form",
+              "value": "={{ $json.quickpay_form }}"
+            },
+            {
+              "name": "targets",
+              "value": "={{ $json.targets }}"
+            },
+            {
+              "name": "paymentType",
+              "value": "={{ $json.paymentType }}"
+            },
+            {
+              "name": "sum",
+              "value": "={{ $json.sum }}"
+            },
+            {
+              "name": "label",
+              "value": "={{ $json.label }}"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "0a47bbd7-f2d7-4ff1-bfb1-e5d4d4d7688e",
+      "name": "HTTP — ЮMoney Quickpay",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -960,
+        912
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "HEAD",
+        "url": "={{ $json.payment_url }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "872bc2b5-0739-4cda-9911-b42a21f29a30",
+      "name": "HTTP HEAD — ссылка живая?",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -480,
+        912
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## 💳 Платёжная цепочка — паттерн «Set → HTTP → Set»\n\n**Три ноды вместо Code-парсинга:**\n\n| # | Нода | Что делает |\n|---|---|---|\n| 1 | **Set — параметры платежа** | Собирает поля: receiver, sum, targets, label, paymentType |\n| 2 | **HTTP — ЮMoney Quickpay** | POST на yoomoney.ru/quickpay/confirm.xml |\n| 3 | **Set — собрать ссылку Quickpay** | Декларативно строит URL из тех же параметров |\n\n### Почему именно Set, а не Code\n\nURL Quickpay — это **детерминированная строка** из query-параметров. Никакой логики, никаких условий — просто шаблон. В n8n такие задачи решает Set-нода с выражениями `{{ }}`. Code-нода нужна только там, где есть ветвления, циклы или реальная обработка ответа.\n\n### Где «источник правды» для параметров\n\nВсе три ноды ссылаются на одну и ту же `Set — параметры платежа`. Значит:\n- POST-запрос и сгенерированная ссылка **гарантированно** используют одни и те же значения\n- Если меняем сумму — меняем в одном месте\n- Нет рассинхрона между «отправили на сервер» и «показали клиенту»\n\n### Зачем тогда HTTP POST, если URL мы и так собрали\n\nPOST на confirm.xml — это **серверная нотификация** ЮMoney о намерении принять платёж. Сам платёж пройдёт после открытия URL клиентом и оплаты в форме. Без POST ссылка работает, но в проде POST полезен — он логируется на стороне ЮMoney и помогает при разборе спорных платежей.\n\n### Сборка URL — что именно склеиваем\n\n```\nhttps://yoomoney.ru/quickpay/confirm.xml\n  ?receiver=4100100000000000\n  &quickpay-form=shop\n  &targets=<urlencoded описание>\n  &paymentType=AC\n  &sum=1500\n  &label=zayavka-1735239012345\n```\n\n**Важно:** `targets` оборачиваем в `encodeURIComponent()`, иначе пробелы и кириллица сломают URL.\n\n### Перед запуском\n\n1. Зарегистрироваться на yoomoney.ru, пройти идентификацию\n2. Скопировать номер кошелька (16 цифр, начинается с 41)\n3. Подставить в `Set — параметры платежа`, поле `receiver`\n\nДля Quickpay API-ключ не нужен. Ключ нужен только для приёма уведомлений об оплате.",
+        "height": 1584,
+        "width": 480,
+        "color": 4
+      },
+      "id": "024bcfce-eadc-441d-80e2-9200f8a6aa31",
+      "name": "Sticky — платёжная цепочка",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1424,
+        1408
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🔍 HEAD — проверка живой ссылки\n\nHEAD-запрос открывает URL **без скачивания контента** — только заголовки. Это легче для сервера и быстрее.\n\n**Что проверяем по ответу:**\n- 200/302 → ссылка рабочая\n- 4xx/5xx → что-то не так, клиенту не отправляем\n\n**Что HEAD НЕ проверяет:**\n- корректность параметров (это сделала Code-нода выше)\n- что платёж реально пройдёт (узнаем только после оплаты)\n\nДля production — добавить ветку If по `$json.statusCode` и в негативном случае писать в лог + уведомлять менеджера.",
+        "height": 592,
+        "width": 320,
+        "color": 5
+      },
+      "id": "114b782d-2010-4d7f-b16c-57d2f1ae9573",
+      "name": "Sticky — HEAD проверка",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -544,
+        1408
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 📝 Шаг 7 — запись ссылки в таблицу\n\nС NocoDB это теперь тривиально (в отличие от Я.Диска):\n\n**Одна HTTP-нода PATCH:**\n- Method: PATCH\n- URL: `https://YOUR-NOCODB-HOST/api/v2/tables/{tableId}/records`\n- Body:\n```\n{\n  \"Id\": {{ $('NocoDB — добавить заявку').item.json[0].Id }},\n  \"Платёжная ссылка\": \"{{ $json.payment_url }}\",\n  \"Статус\": \"ссылка отправлена\"\n}\n```\n\n**Что важно:**\n- INSERT в NocoDB возвращает созданную запись с её `Id` — берём из выхода первой ноды\n- PATCH обновляет только переданные поля, остальные не трогает\n- Никакого download → read → modify → write → upload — атомарный UPDATE в БД\n\nВ уроке оставляем без записи ссылки, чтобы цепочка осталась обозримой. На практике — добавить PATCH-ноду после `HTTP HEAD — ссылка живая?`.",
+        "height": 768,
+        "width": 480,
+        "color": 3
+      },
+      "id": "6236bae2-d067-438b-a88f-6e0b71275b5f",
+      "name": "Sticky — запись ссылки в таблицу",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -912,
+        2208
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s01",
+              "name": "receiver",
+              "value": "4100119554358096",
+              "type": "string"
+            },
+            {
+              "id": "s02",
+              "name": "quickpay_form",
+              "value": "shop",
+              "type": "string"
+            },
+            {
+              "id": "s03",
+              "name": "paymentType",
+              "value": "AC",
+              "type": "string"
+            },
+            {
+              "id": "s04",
+              "name": "sum",
+              "value": "={{ $('Code — парсинг и проверка').item.json.data.amount }}",
+              "type": "string"
+            },
+            {
+              "id": "s05",
+              "name": "targets",
+              "value": "={{ $('Code — парсинг и проверка').item.json.data.payment_description }}",
+              "type": "string"
+            },
+            {
+              "id": "s06",
+              "name": "label",
+              "value": "=zayavka-{{ $now.toMillis() }}",
+              "type": "string"
+            },
+            {
+              "id": "s07",
+              "name": "client_email",
+              "value": "={{ $('Code — парсинг и проверка').item.json.data.email }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a439f815-3d43-4f4d-9f4d-56edc4c7a233",
+      "name": "Set — параметры платежа",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1424,
+        992
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "p01",
+              "leftValue": "={{ $json.sum }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "p02",
+              "leftValue": "={{ Number($json.sum) }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "p03",
+              "leftValue": "={{ $json.targets }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "p04",
+              "leftValue": "={{ $json.receiver }}",
+              "rightValue": "^41\\d{14}$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e69fde3c-62cf-4b25-87b1-5d5d2a1b401e",
+      "name": "If — pre-check платежа",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1200,
+        992
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "pe1",
+              "name": "success",
+              "value": "=false",
+              "type": "boolean"
+            },
+            {
+              "id": "pe2",
+              "name": "error",
+              "value": "Платёж не сформирован: pre-check не пройден",
+              "type": "string"
+            },
+            {
+              "id": "pe3",
+              "name": "params",
+              "value": "={{ $json }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c9afd24b-f215-404c-acb6-b2b3d1a1413e",
+      "name": "Set — ошибка pre-check",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1200,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "demo-full-cycle",
+        "options": {}
+      },
+      "id": "3d248a75-624f-4839-911c-d1be80a43d5f",
+      "name": "Webhook — приём заявки",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -2608,
+        1072
+      ],
+      "webhookId": "demo-full-cycle-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c01",
+              "leftValue": "={{ $json.body.name }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c02",
+              "leftValue": "={{ $json.body.contact }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c03",
+              "leftValue": "={{ $json.body.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c04",
+              "leftValue": "={{ $json.body.service }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c05",
+              "leftValue": "={{ $json.body.amount }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c06",
+              "leftValue": "={{ $json.body.message }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "35f7d284-49c9-47e0-a388-15c2c04e3f39",
+      "name": "If — валидация полей",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2384,
+        1072
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gigachat.devices.sberbank.ru/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"GigaChat\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Ты — помощник по обработке входящих заявок.\\n\\nТвоя задача: проанализировать данные заявки и вернуть структурированный результат в формате JSON.\\n\\nСтруктура JSON:\\n{\\n  \\\"client_name\\\": \\\"имя клиента\\\",\\n  \\\"contact\\\": \\\"телефон или иной контакт\\\",\\n  \\\"email\\\": \\\"адрес электронной почты\\\",\\n  \\\"request_type\\\": \\\"короткая категория запроса\\\",\\n  \\\"request_summary\\\": \\\"1-2 предложения, резюме обращения\\\",\\n  \\\"payment_description\\\": \\\"короткое описание услуги для счёта\\\",\\n  \\\"amount\\\": \\\"сумма как строка, без выдумок\\\",\\n  \\\"priority\\\": \\\"high | medium | low\\\"\\n}\\n\\nПравила:\\n- не выдумывай сумму, сроки, скидки и условия;\\n- если данных не хватает, укажи значение \\\"требуется уточнение\\\";\\n- пиши кратко и без рекламных формулировок;\\n- сохраняй русский язык;\\n- верни ТОЛЬКО валидный JSON без markdown-обёртки и без пояснений.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Данные заявки:\\nИмя: {{ $json.body.name }}\\nКонтакт: {{ $json.body.contact }}\\nАдрес электронной почты: {{ $json.body.email }}\\nУслуга: {{ $json.body.service }}\\nСумма: {{ $json.body.amount }}\\nКомментарий клиента: {{ $json.body.message }}\\n\\nПроанализируй заявку и верни структурированный JSON по схеме выше.\"\n    }\n  ],\n  \"temperature\": 0.2,\n  \"max_tokens\": 800,\n  \"stream\": false\n}",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "b52738a9-1214-47dd-898a-416d1c66a748",
+      "name": "GigaChat — структурный анализ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2144,
+        992
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "vOR8UvwL79ADprhW",
+          "name": "amo crm"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResponse = $json.choices[0].message.content;\nconst cleaned = aiResponse.replace(/^```(json)?\\s*/i, '').replace(/\\s*```$/, '').trim();\nlet parsed;\ntry { parsed = JSON.parse(cleaned); }\ncatch (e) { return [{ json: { success: false, error: 'Не удалось распарсить JSON', raw: aiResponse } }]; }\n\nconst original = $('Webhook — приём заявки').item.json.body;\nreturn [{\n  json: {\n    success: true,\n    data: parsed,\n    validation: {\n      amount_unchanged: String(parsed.amount).trim() === String(original.amount).trim(),\n      email_unchanged: parsed.email === original.email,\n      contact_unchanged: parsed.contact === original.contact\n    }\n  }\n}];"
+      },
+      "id": "b874def4-f299-43bd-88f9-c4a17dfa254e",
+      "name": "Code — парсинг и проверка",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1904,
+        992
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e01",
+              "name": "success",
+              "value": "=false",
+              "type": "boolean"
+            },
+            {
+              "id": "e02",
+              "name": "error",
+              "value": "Заявка не прошла валидацию",
+              "type": "string"
+            },
+            {
+              "id": "e03",
+              "name": "received_body",
+              "value": "={{ $('Webhook — приём заявки').item.json.body }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cc7916a0-ef3c-44cb-9ab0-430e2616a87a",
+      "name": "Set — ошибка валидации",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2384,
+        1296
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 📋 Тестовые данные\n\n**Body для POST:**\n\n```\n{\n  \"name\": \"Анна\",\n  \"contact\": \"+7 900 000-00-00\",\n  \"email\": \"anna.test@example.com\",\n  \"service\": \"консультация по автоматизации\",\n  \"amount\": \"1500\",\n  \"message\": \"Хочу понять, как автоматизировать заявки с сайта и сразу отправлять клиенту ссылку на оплату.\"\n}\n```",
+        "height": 280,
+        "width": 300,
+        "color": 6
+      },
+      "id": "6918a3cc-6e9f-47c5-9723-c50df2a17cd3",
+      "name": "Sticky — тестовые данные",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2928,
+        752
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ⚠️ Ветка ошибки валидации\n\nСюда попадают заявки с пустыми полями. ИИ не вызывается.\n\nВ проде: лог + уведомление менеджеру + HTTP 400.",
+        "height": 248,
+        "width": 280
+      },
+      "id": "9bd2e331-fc70-49a8-9b63-0ed251c18305",
+      "name": "Sticky — ветка ошибки",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2464,
+        1472
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://app.nocodb.com/api/v2/tables/m55xfqn2i0cjy61/records",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"Дата\": \"{{ $now.format('yyyy-MM-dd') }}\",\n  \"Имя\": \"{{ $('Code — парсинг и проверка').item.json.data.client_name }}\",\n  \"Контакт\": \"{{ $('Code — парсинг и проверка').item.json.data.contact }}\",\n  \"Адрес электронной почты\": \"{{ $('Code — парсинг и проверка').item.json.data.email }}\",\n  \"Тип заявки\": \"{{ $('Code — парсинг и проверка').item.json.data.request_type }}\",\n  \"Описание\": \"{{ $('Code — парсинг и проверка').item.json.data.request_summary }}\",\n  \"Сумма\": \"{{ $('Code — парсинг и проверка').item.json.data.amount }}\",\n  \"Статус\": \"новая\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "75352f72-25c5-4ab1-b360-ad025cecb137",
+      "name": "NocoDB — добавить заявку",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1664,
+        992
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DjCEwU7woorIVglS",
+          "name": "NocoDB — xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "qp01",
+              "name": "payment_url",
+              "value": "=https://yoomoney.ru/quickpay/confirm.xml?receiver={{ $('Set — параметры платежа').item.json.receiver }}&quickpay-form={{ $('Set — параметры платежа').item.json.quickpay_form }}&targets={{ encodeURIComponent($('Set — параметры платежа').item.json.targets) }}&paymentType={{ $('Set — параметры платежа').item.json.paymentType }}&sum={{ $('Set — параметры платежа').item.json.sum }}&label={{ $('Set — параметры платежа').item.json.label }}",
+              "type": "string"
+            },
+            {
+              "id": "qp02",
+              "name": "payment_label",
+              "value": "={{ $('Set — параметры платежа').item.json.label }}",
+              "type": "string"
+            },
+            {
+              "id": "qp03",
+              "name": "payment_amount",
+              "value": "={{ $('Set — параметры платежа').item.json.sum }}",
+              "type": "string"
+            },
+            {
+              "id": "qp04",
+              "name": "payment_description",
+              "value": "={{ $('Set — параметры платежа').item.json.targets }}",
+              "type": "string"
+            },
+            {
+              "id": "qp05",
+              "name": "client_email",
+              "value": "={{ $('Set — параметры платежа').item.json.client_email }}",
+              "type": "string"
+            },
+            {
+              "id": "qp06",
+              "name": "http_status",
+              "value": "={{ $json.statusCode }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dc491e5d-b4b8-43b3-80d8-993a177e431b",
+      "name": "Set — собрать ссылку Quickpay",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -720,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "https://app.nocodb.com/api/v2/tables/m55xfqn2i0cjy61/records",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"Id\": {{ $('NocoDB — добавить заявку').item.json.Id }},\n  \"Платёжная ссылка\": \"{{ $('Set — собрать ссылку Quickpay').item.json.payment_url }}\",\n  \"Статус\": \"ожидает оплаты\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "e79423ec-c697-4b65-8331-8dde693f5af7",
+      "name": "NocoDB — обновить ссылку и статус",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -240,
+        912
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DjCEwU7woorIVglS",
+          "name": "NocoDB — xc-token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gigachat.devices.sberbank.ru/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"GigaChat\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Ты пишешь короткие, тёплые, но профессиональные письма клиентам от лица компании. На «вы». Без рекламных формулировок. Без эмодзи. Без подписи. Без темы письма. Не выдумывай детали — используй только то, что прямо есть в данных. Без markdown.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Напиши клиенту короткое письмо (4–6 предложений). Данные:\\n- Имя клиента: {{ $('Code — парсинг и проверка').item.json.data.client_name }}\\n- Что заказал: {{ $('Code — парсинг и проверка').item.json.data.request_summary }}\\n- Сумма: {{ $('Code — парсинг и проверка').item.json.data.amount }} руб.\\n- Ссылка на оплату: {{ $('Set — собрать ссылку Quickpay').item.json.payment_url }}\\n\\nСтруктура письма:\\n1) приветствие по имени\\n2) подтверждение, что заявка принята\\n3) краткое упоминание услуги и суммы\\n4) ссылка на оплату как обычная строка (не html, не markdown)\\n5) фраза, что после оплаты с клиентом свяжется менеджер\\n\\nВерни ТОЛЬКО текст письма, без темы и подписи.\"\n    }\n  ],\n  \"temperature\": 0.3,\n  \"max_tokens\": 500,\n  \"stream\": false\n}",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "e3c3615c-2ae9-4cf8-a1dc-e90bc37c8556",
+      "name": "GigaChat — текст письма",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        912
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "vOR8UvwL79ADprhW",
+          "name": "amo crm"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "valaria.kruchinina@yandex.ru",
+        "toEmail": "={{ $('Code — парсинг и проверка').item.json.data.email }}",
+        "subject": "=Ваша заявка получена — ссылка на оплату",
+        "emailFormat": "text",
+        "text": "={{ $json.choices[0].message.content.trim() }}",
+        "options": {}
+      },
+      "id": "e0271d4d-1fff-4388-801a-007cb95a7bda",
+      "name": "Email — отправить клиенту",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        912
+      ],
+      "webhookId": "yandex-smtp-email",
+      "credentials": {
+        "smtp": {
+          "id": "uT5pSYnRHCIudCbC",
+          "name": "Yandex SMTP — моя почта"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 📧 Письмо клиенту — GigaChat + SMTP\n\n**Две ноды:**\n1. `GigaChat — текст письма` — генерит текст\n2. `Email — отправить клиенту` — отправляет через Яндекс SMTP\n\n### Почему две GigaChat-ноды, а не одна\n\nПервая (`структурный анализ`) — это **парсер**: вернуть JSON со строгой схемой, `temperature: 0.2`, никакой креативности.\n\nВторая (`текст письма`) — это **писатель**: вернуть человеческий текст, `temperature: 0.3`, немного больше свободы для естественной речи.\n\nРазные задачи → разные настройки → разные ноды. Промпт в каждой затачивается под свою цель.\n\n### Почему plain text, а не JSON\n\nВ первой ноде нам нужен **парсер** (хотим вытащить структурированные поля). Здесь нам нужно просто получить **готовый текст**, который сразу полетит в SMTP. Городить JSON со схемой `{subject, body}` ради двух полей и потом парсить — лишний шаг. Тему задаём в самой ноде Email, тело берём напрямую.\n\n### Что подставляется в письмо\n\nПромпт прокидывает в GigaChat 4 поля:\n- имя из заявки\n- краткое резюме (то, что просил клиент)\n- сумма\n- ссылка на оплату (из `Set — собрать ссылку Quickpay`)\n\n### Email-нода: настройка Яндекс SMTP\n\n1. В аккаунте Яндекс → **ID** → **Безопасность** → **Пароли приложений**\n2. Создать пароль для «Почты» (для протоколов IMAP/SMTP)\n3. В n8n → Credentials → SMTP → создать с параметрами:\n   - **Host:** `smtp.yandex.ru`\n   - **Port:** `465`\n   - **SSL/TLS:** включено\n   - **User:** `your-name@yandex.ru`\n   - **Password:** *тот пароль приложения*\n4. В ноде `Email — отправить клиенту`:\n   - **From Email:** твой ящик (тот же, что в credential)\n   - **To Email:** `{{ $('Code — парсинг и проверка').item.json.data.email }}`\n   - **Subject:** фиксированная строка\n   - **Text:** `{{ $json.choices[0].message.content.trim() }}`\n\n### Почему SMTP, а не HTTP\n\nУ обычной Яндекс.Почты (`@yandex.ru`) нет HTTP-API для отправки писем. Только SMTP. Для домена на Яндекс 360 — есть API, но это отдельная история. Здесь рабочий путь — нативная SMTP-нода n8n.\n\n### Почему именно plain text, а не HTML\n\nДля транзакционного письма с одной ссылкой HTML избыточен. Plain text:\n- меньше шанс попасть в спам\n- ссылку клиент скопирует и без HTML-разметки\n- никаких сюрпризов с рендерингом в разных почтовых клиентах\n\n💡 В будущем уроке: добавить ещё одну PATCH-ноду — отметить в NocoDB, что письмо ушло.",
+        "height": 1832,
+        "width": 480,
+        "color": 4
+      },
+      "id": "d74cb01b-37f0-4720-8d75-6d3be3cdf8e3",
+      "name": "Sticky — письмо клиенту",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -96,
+        -992
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot8762708177:AAF_yXa57JPip-RT6uqOLxH-7FvQhOy5dqw/sendMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"900215638\",\n  \"text\": \"📨 Клиенту отправлена ссылка на оплату\\n\\nКлиент: {{ $('Code — парсинг и проверка').item.json.data.client_name }}\\nEmail: {{ $('Code — парсинг и проверка').item.json.data.email }}\\nУслуга: {{ $('Code — парсинг и проверка').item.json.data.request_type }}\\nСумма: {{ $('Code — парсинг и проверка').item.json.data.amount }} ₽\\n\\nСсылка на оплату:\\n{{ $('Set — собрать ссылку Quickpay').item.json.payment_url }}\",\n  \"disable_web_page_preview\": true\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "02eb87d4-4864-40ee-ad9f-ecb922f7a668",
+      "name": "Telegram — уведомление команде",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 💬 Уведомление команде в Telegram\n\n**Простейший HTTP-запрос к Bot API.** Никакой нативной ноды — Telegram отлично работает через `api.telegram.org`, и это хорошая иллюстрация, что любая интеграция это просто POST + JSON.\n\n### URL\n\n```\nhttps://api.telegram.org/bot<TOKEN>/sendMessage\n```\n\nТокен идёт прямо в путь URL. Это особенность Telegram API — никаких Authorization-заголовков.\n\n### Подготовка перед запуском\n\n**1. Создать бота:**\n- В Telegram написать [@BotFather](https://t.me/BotFather)\n- `/newbot` → имя → username (заканчивается на `_bot`)\n- BotFather пришлёт токен формата `123456:ABCdef...`\n- Подставить в URL вместо `YOUR_BOT_TOKEN`\n\n**2. Получить chat_id команды:**\n- Добавить бота в групповой чат команды\n- Написать в чате любое сообщение (хотя бы `/start@your_bot`)\n- Открыть: `https://api.telegram.org/bot<TOKEN>/getUpdates`\n- Найти в ответе `chat.id` — для групп начинается с минуса: `-1001234567890`\n- Подставить в body вместо `YOUR_CHAT_ID`\n\n### Тело сообщения\n\nPlain text, без `parse_mode`. Почему:\n- не нужно экранировать `<`, `>`, `&` из имени или описания клиента\n- Telegram сам распознаёт URL и делает кликабельным\n- читается одинаково на всех клиентах\n\nЕсли хочется жирного шрифта — добавить `\"parse_mode\": \"HTML\"` и обернуть поля в `<b>...</b>`. Но тогда нужно следить, чтобы в данных не было HTML-символов.\n\n### `disable_web_page_preview: true`\n\nБез этого Telegram попытается сделать превью страницы YooMoney в чате — обычно это пустая или ломаная карточка. Отключаем сразу.\n\n### Безопасность токена\n\nСейчас токен в URL ноды — для учебной чистоты видно явно. В продакшене:\n- завести в n8n Credentials → Generic Credential → custom field `botToken`\n- в URL использовать `={{ $credentials.botToken }}` (через выражение)\n- так токен не утечёт ни в логи, ни в экспорт воркфлоу\n\n### Почему именно здесь, в конце цепочки\n\nУведомление команде = сигнал «всё прошло до конца». Если упало раньше — Telegram не звякнет, и это правильно. Не надо уведомлять о незаконченной работе.\n\nАльтернатива для прода — отдельная Telegram-нота **на ошибки** в Error Workflow, которая ловит падения и пишет в чат «упало на узле X, заявка №Y».",
+        "height": 1816,
+        "width": 460,
+        "color": 5
+      },
+      "id": "2c1b97e8-e320-4c49-8713-61e2915ca548",
+      "name": "Sticky — Telegram",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        448,
+        -976
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "If — валидация полей": {
+      "main": [
+        [
+          {
+            "node": "GigaChat — структурный анализ",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set — ошибка валидации",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GigaChat — структурный анализ": {
+      "main": [
+        [
+          {
+            "node": "Code — парсинг и проверка",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code — парсинг и проверка": {
+      "main": [
+        [
+          {
+            "node": "NocoDB — добавить заявку",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP — ЮMoney Quickpay": {
+      "main": [
+        [
+          {
+            "node": "Set — собрать ссылку Quickpay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set — параметры платежа": {
+      "main": [
+        [
+          {
+            "node": "If — pre-check платежа",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If — pre-check платежа": {
+      "main": [
+        [
+          {
+            "node": "HTTP — ЮMoney Quickpay",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set — ошибка pre-check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook — приём заявки": {
+      "main": [
+        [
+          {
+            "node": "If — валидация полей",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NocoDB — добавить заявку": {
+      "main": [
+        [
+          {
+            "node": "Set — параметры платежа",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set — собрать ссылку Quickpay": {
+      "main": [
+        [
+          {
+            "node": "HTTP HEAD — ссылка живая?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP HEAD — ссылка живая?": {
+      "main": [
+        [
+          {
+            "node": "NocoDB — обновить ссылку и статус",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NocoDB — обновить ссылку и статус": {
+      "main": [
+        [
+          {
+            "node": "GigaChat — текст письма",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GigaChat — текст письма": {
+      "main": [
+        [
+          {
+            "node": "Email — отправить клиенту",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email — отправить клиенту": {
+      "main": [
+        [
+          {
+            "node": "Telegram — уведомление команде",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "23e2433b-2deb-46e1-b67c-74a8325a9546",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "21e5194fb4548d766b96ebd333779b8063508b9c6aadeed69cb0d8bbe7d15985"
+  },
+  "nodeGroups": [],
+  "id": "QWekskJbwqTjG8nX",
+  "tags": []
+}
