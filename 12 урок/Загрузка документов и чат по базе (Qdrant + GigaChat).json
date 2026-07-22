@@ -1,0 +1,274 @@
+{
+  "name": "Загрузка документов и чат по базе (Qdrant + GigaChat)",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        10368,
+        5248
+      ],
+      "id": "b89596d0-1ae6-43ef-8b34-c6897b078bbe",
+      "name": "Запуск загрузки"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ngw.devices.sberbank.ru:9443/api/v2/oauth",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "RqUID",
+              "value": "6f0b1291-c7f3-43c6-bb2e-9f3efb2dc98e"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "scope",
+              "value": "GIGACHAT_API_PERS"
+            }
+          ]
+        },
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 8000
+            }
+          },
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        10560,
+        5248
+      ],
+      "id": "e0a870c0-6f5a-4147-a3a4-55f16b20a32c",
+      "name": "Получить токен GigaChat",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1MZbHnbhUYEexHTx",
+          "name": "Gigachat fin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "doc-1",
+              "name": "text",
+              "value": "База знаний: аренда кабриолетов в Ницце (Riviera Cabrio Nice) Общие условия аренды Минимальный срок аренды — 3 дня. Максимальный срок — 45 дней, при более длительной аренде действуют индивидуальные условия. Бронирование подтверждается после внесения предоплаты 25% от стоимости. Автомобиль выдаётся заправленным «под полный бак» и должен быть возвращён с полным баком; при недоливе удерживается стоимость топлива плюс сервисный сбор 25 евро. Залог Залог за аренду автомобиля — 600 евро для большинства моделей. Для премиальных моделей (Porsche Boxster, Audi TT) залог составляет 1000 евро. Залог блокируется на карте клиента при выдаче и возвращается в течение 10 рабочих дней после сдачи автомобиля без повреждений и штрафов. Требования к водителю Минимальный возраст водителя — 23 года. Водительский стаж — не менее 2 лет. Требуются действующие водительские права категории B. Для граждан стран вне ЕС дополнительно нужны международные водительские права. Для водителей младше 23 лет аренда возможна только по индивидуальному согласованию с доплатой «молодой водитель» 18 евро в сутки. Страховка В стоимость аренды включена страховка КАСКО с франшизой 1000 евро. Можно уменьшить франшизу до нуля, подключив опцию полного покрытия за 15 евро в сутки. Страховка не покрывает повреждения салона, колёс и днища, а также ущерб, полученный при нарушении ПДД или вождении в нетрезвом виде. Стоимость аренды по моделям Porsche Boxster (кабриолет) — 180 евро в сутки. Audi TT Roadster (кабриолет) — 140 евро в сутки. MINI Cabrio — 80 евро в сутки. Fiat 500C — 60 евро в сутки. При аренде от 7 дней действует скидка 12%, от 14 дней — 18%. Цены указаны с учётом НДС (TVA 20%). Доставка и возврат Бесплатная доставка и возврат автомобиля в пределах города Ницца. Доставка в аэропорт Ниццы (NCE) — 30 евро в одну сторону. Доставка в другие города Лазурного Берега (Канны, Антиб, Монако) — от 45 евро, рассчитывается по расстоянию. Подача автомобиля возможна с 8:00 до 22:00. Дополнительные услуги Второй водитель — 6 евро в сутки, вписывается в договор при выдаче. Детское кресло — 8 евро в сутки. GPS-навигатор — 5 евро в сутки. Wi-Fi роутер — 7 евро в сутки. Трансграничная поездка (выезд в Италию или Монако) требует отдельного письменного согласования и доплаты 40 евро. Оплата Принимаются банковские карты Visa, Mastercard и American Express, а также оплата наличными евро при получении. Оплата криптовалютой не принимается. Залог блокируется только на карте — наличными залог не принимается. Полная оплата аренды производится при выдаче автомобиля. Отмена бронирования Бесплатная отмена возможна не позднее чем за 72 часа до начала аренды — предоплата возвращается полностью. При отмене менее чем за 72 часа предоплата не возвращается. При неявке клиента (no-show) бронь аннулируется, предоплата не возвращается. График работы и контакты Офис работает ежедневно с 8:00 до 22:00 без выходных. Экстренная поддержка на дороге доступна круглосуточно по телефону, указанному в договоре. Язык обслуживания: французский, английский, русский, итальянский.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        10768,
+        5248
+      ],
+      "id": "6ed4e08e-5fb7-45c4-9b1c-2a499d7d96c9",
+      "name": "Документ"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = ($input.first().json.text || '').toString();\nconst size = 1200;\nconst overlap = 100;\nconst chunks = [];\nlet i = 0;\nwhile (i < text.length) {\n  const end = Math.min(i + size, text.length);\n  const piece = text.slice(i, end).trim();\n  if (piece.length > 0) chunks.push(piece);\n  if (end === text.length) break;\n  i += (size - overlap);\n}\nreturn chunks.map((c, idx) => ({ json: { chunk_id: idx + 1, chunk_text: c } }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10960,
+        5248
+      ],
+      "id": "f0ab37a2-7ea2-401d-a458-a70112007b51",
+      "name": "Нарезка на чанки"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gigachat.devices.sberbank.ru/api/v1/embeddings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Получить токен GigaChat').first().json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"EmbeddingsGigaR\",\n  \"input\": {{ JSON.stringify($json.chunk_text) }}\n}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 10000
+            }
+          },
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        11168,
+        5248
+      ],
+      "id": "fda4da43-9392-4b47-86c2-f6345add3d01",
+      "name": "GigaChat embeddings"
+    },
+    {
+      "parameters": {
+        "jsCode": "const embItems = $input.all();\nconst chunks = $('Нарезка на чанки').all();\nconst points = embItems.map((it, idx) => {\n  const emb = it.json.data[0].embedding.map(Number);\n  return {\n    id: idx + 1,\n    vector: emb,\n    payload: { text: chunks[idx].json.chunk_text }\n  };\n});\nreturn [{ json: { points } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11360,
+        5248
+      ],
+      "id": "68debc76-fdcb-4f55-b784-c7a9e907343d",
+      "name": "Собрать точки (float)"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://cc9b6eac-4e89-40fa-a199-f29d849bbacf.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/cabrio_2560/points",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        11568,
+        5248
+      ],
+      "id": "903a8e5f-dcdf-4515-8a06-3bc3b02e67dd",
+      "name": "Qdrant upsert",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "kdIXNm5AFU3OknGR",
+          "name": "Qdrant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Загрузка в Qdrant под GigaChat (HTTP-обход)\n\nОбходим ноду Qdrant vector store — она портит вектор GigaChat (целые 0 вместо float).\n\nПоток: токен → документ → нарезка → GigaChat embeddings (HTTP) → Code (float + сборка точек) → Qdrant upsert (HTTP).\n\n🔐 Три секрета — в credentials (Header Auth):\n1) «GigaChat Auth (Basic)»: name=Authorization, value=Basic <ключ_авторизации>. Ставится на ноду «Получить токен».\n2) «Qdrant api-key»: name=api-key, value=<ключ Qdrant>. Ставится на ноду «Qdrant upsert».\n\n⚙️ В ноде «Qdrant upsert» впиши свой endpoint в URL. Коллекция — cabrio_2560 (size 2560, Cosine).\n\n✅ SSL Минцифры решается опцией Ignore SSL на HTTP-нодах — менять инстанс не нужно.\n⏱ Токен получается автоматически в начале (живёт 30 мин, на один прогон хватает).",
+        "height": 420,
+        "width": 460,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        10208,
+        4752
+      ],
+      "id": "4090ab1b-13df-4565-9364-e907e4adeb8e",
+      "name": "О сценарии1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Запуск загрузки": {
+      "main": [
+        [
+          {
+            "node": "Получить токен GigaChat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Получить токен GigaChat": {
+      "main": [
+        [
+          {
+            "node": "Документ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Документ": {
+      "main": [
+        [
+          {
+            "node": "Нарезка на чанки",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Нарезка на чанки": {
+      "main": [
+        [
+          {
+            "node": "GigaChat embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GigaChat embeddings": {
+      "main": [
+        [
+          {
+            "node": "Собрать точки (float)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Собрать точки (float)": {
+      "main": [
+        [
+          {
+            "node": "Qdrant upsert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "258c2f4a-b001-4d09-a46a-5530afa100f9",
+  "meta": {
+    "instanceId": "21e5194fb4548d766b96ebd333779b8063508b9c6aadeed69cb0d8bbe7d15985"
+  },
+  "nodeGroups": [],
+  "id": "49p87i8nqTI7Vgy7",
+  "tags": []
+}
