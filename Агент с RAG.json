@@ -1,0 +1,324 @@
+{
+  "name": "Агент с RAG",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        1440,
+        1984
+      ],
+      "id": "3289db22-e4d4-4140-9c05-c3c2382a3e5b",
+      "name": "Чат: вопрос",
+      "webhookId": "a1b2c3d4-e5f6-47a8-9b0c-1d2e3f4a5b6c"
+    },
+    {
+      "parameters": {
+        "jsCode": "const query = $('Чат: вопрос').first().json.chatInput;\nconst token = $('Получить токен GigaChat1').first().json.access_token;\nreturn [{ json: { token, query } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1952,
+        1984
+      ],
+      "id": "6f693ca6-4e01-41e6-9022-8a22423f32f3",
+      "name": "Подготовка (токен+вопрос)"
+    },
+    {
+      "parameters": {
+        "content": "## Инструмент поиска v2 (исправлен null)\n\nВход: `query`. Выход: `response` — текст из базы.\n\nПоток: вопрос → токен → **Code «Подготовка» (собирает token+query)** → embeddings → Code (float+тело) → Qdrant search → Code (текст).\n\n🔧 Что исправлено: query и токен собираются в Code-ноде через $('...').first() — надёжно резолвится в subworkflow, не даёт input:null.\n\n🔐 Credentials (Header Auth):\n• «GigaChat Auth (Basic)» → нода токена.\n• «Qdrant api-key» → нода Qdrant search.\n⚙️ Проверь endpoint и коллекцию cabrio_2560.\n✅ Ignore SSL на нодах GigaChat.",
+        "height": 380,
+        "width": 460,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        832,
+        1568
+      ],
+      "id": "7592a240-e7a9-4318-b95d-0c6d0a7ec897",
+      "name": "О инструменте1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ngw.devices.sberbank.ru:9443/api/v2/oauth",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "RqUID",
+              "value": "6f0b1291-c7f3-43c6-bb2e-9f3efb2dc98e"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "scope",
+              "value": "GIGACHAT_API_PERS"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1728,
+        1984
+      ],
+      "id": "4de12258-90d9-4889-9a6d-0f46c65567b3",
+      "name": "Получить токен GigaChat1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1MZbHnbhUYEexHTx",
+          "name": "Gigachat fin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gigachat.devices.sberbank.ru/api/v1/embeddings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"EmbeddingsGigaR\",\n  \"input\": {{ JSON.stringify($json.query) }}\n}",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2160,
+        1984
+      ],
+      "id": "fd6988d0-0fc1-4f1e-b5c2-39b214918a1b",
+      "name": "GigaChat embeddings1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const v = $input.first().json.data[0].embedding.map(Number);\nreturn [{ json: { body: { vector: v, limit: 4, with_payload: true } } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2384,
+        1984
+      ],
+      "id": "0fc373a2-6948-480f-bcdf-fcb5923f72d6",
+      "name": "Собрать запрос (float)1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://cc9b6eac-4e89-40fa-a199-f29d849bbacf.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/cabrio_2560/points/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2608,
+        1984
+      ],
+      "id": "907780a9-b033-4bf8-8c2c-67818c0f69c3",
+      "name": "Qdrant search1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "kdIXNm5AFU3OknGR",
+          "name": "Qdrant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = ($input.first().json.result) || [];\nconst text = r.map(x => x.payload && x.payload.text).filter(Boolean).join('\\n\\n');\nreturn [{ json: { response: text || 'В базе знаний ничего не найдено по этому вопросу.' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2832,
+        1984
+      ],
+      "id": "c845a51e-3a4a-42ae-a549-1c5de69e5c38",
+      "name": "Достать текст1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Вопрос клиента:\n{{ $('Чат: вопрос').first().json.chatInput }}\n\nБаза знаний (найдено по вопросу):\n{{ $json.response }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Ты — ассистент компании по аренде кабриолетов.\n\nОтвечай на вопрос клиента, используя ТОЛЬКО информацию из блока «База знаний» ниже.\n\nПравила:\n• Отвечай по-русски, на «вы», кратко — 1–3 предложения, только по сути вопроса.\n• НИКОГДА не выдумывай цифры, суммы, сроки и правила — только то, что есть в базе.\n• Если в базе нет ответа — честно скажи, что нужно уточнить у специалиста.\n• Не пересказывай весь документ и не упоминай саму базу знаний — пиши клиенту как живой оператор."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        3056,
+        1984
+      ],
+      "id": "0d39e41f-8c37-4148-9c0b-543f748c0ae3",
+      "name": "Ответ LLM"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        3072,
+        2208
+      ],
+      "id": "d6730a73-c0b3-4e5b-b5cb-05cffbffb041",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "6eFnROHtjX1mJTar",
+          "name": "OpenAI account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Подготовка (токен+вопрос)": {
+      "main": [
+        [
+          {
+            "node": "GigaChat embeddings1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Получить токен GigaChat1": {
+      "main": [
+        [
+          {
+            "node": "Подготовка (токен+вопрос)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GigaChat embeddings1": {
+      "main": [
+        [
+          {
+            "node": "Собрать запрос (float)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Собрать запрос (float)1": {
+      "main": [
+        [
+          {
+            "node": "Qdrant search1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant search1": {
+      "main": [
+        [
+          {
+            "node": "Достать текст1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Чат: вопрос": {
+      "main": [
+        [
+          {
+            "node": "Получить токен GigaChat1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Достать текст1": {
+      "main": [
+        [
+          {
+            "node": "Ответ LLM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Ответ LLM",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "9f82046b-1a0c-4948-8fe5-59a2897988e7",
+  "meta": {
+    "instanceId": "21e5194fb4548d766b96ebd333779b8063508b9c6aadeed69cb0d8bbe7d15985"
+  },
+  "nodeGroups": [],
+  "id": "ddC8i2D7VKd64yNh",
+  "tags": []
+}
