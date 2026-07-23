@@ -1,0 +1,282 @@
+{
+  "name": "subworkflow для обращения к базе",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ngw.devices.sberbank.ru:9443/api/v2/oauth",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "RqUID",
+              "value": "6f0b1291-c7f3-43c6-bb2e-9f3efb2dc98e"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "scope",
+              "value": "GIGACHAT_API_PERS"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        8544,
+        4640
+      ],
+      "id": "d50685b5-5bf8-4e04-b686-0f1a16de322f",
+      "name": "Получить токен GigaChat1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "tCiTK9rRaKthDOZs",
+          "name": "Giga chat"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const query = $('Start').first().json.question_firstItem;\nconst token = $('Получить токен GigaChat1').first().json.access_token;\nreturn [{ json: { token, query } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8768,
+        4640
+      ],
+      "id": "ff3d2936-93ca-481b-9e14-1fa867d6d984",
+      "name": "Подготовка (токен+вопрос)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gigachat.devices.sberbank.ru/api/v1/embeddings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"EmbeddingsGigaR\",\n  \"input\": {{ JSON.stringify($json.query) }}\n}",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        8992,
+        4640
+      ],
+      "id": "049097a2-599e-4a36-959e-a920c530b412",
+      "name": "GigaChat embeddings1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const v = $input.first().json.data[0].embedding.map(Number);\nreturn [{ json: { body: { vector: v, limit: 4, with_payload: true } } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9216,
+        4640
+      ],
+      "id": "8d797840-2198-4deb-acf3-9bbc7d4282aa",
+      "name": "Собрать запрос (float)1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://cc9b6eac-4e89-40fa-a199-f29d849bbacf.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/cabrio_2560/points/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        9440,
+        4640
+      ],
+      "id": "70db6526-8f4e-4703-9710-90f7c0c75025",
+      "name": "Qdrant search1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "kdIXNm5AFU3OknGR",
+          "name": "Qdrant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = ($input.first().json.result) || [];\nconst text = r.map(x => x.payload && x.payload.text).filter(Boolean).join('\\n\\n');\nreturn [{ json: { response: text || 'В базе знаний ничего не найдено по этому вопросу.' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9664,
+        4640
+      ],
+      "id": "40f36dc3-cef4-4ef2-90c0-a08ec3a50536",
+      "name": "Достать текст1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "eea48b76-c1f0-4f13-8ed4-451a05436e8f",
+              "name": "response",
+              "value": "={{ $json.response }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        9872,
+        4640
+      ],
+      "id": "4fde7e90-3879-4c59-a54c-9eb4098bfd34",
+      "name": "Return"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "question_firstItem",
+              "type": "any"
+            }
+          ]
+        }
+      },
+      "id": "c55a8ee2-3f3f-484f-853e-d19ecb88bf0e",
+      "typeVersion": 1.1,
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        8336,
+        4640
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Получить токен GigaChat1": {
+      "main": [
+        [
+          {
+            "node": "Подготовка (токен+вопрос)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Подготовка (токен+вопрос)": {
+      "main": [
+        [
+          {
+            "node": "GigaChat embeddings1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GigaChat embeddings1": {
+      "main": [
+        [
+          {
+            "node": "Собрать запрос (float)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Собрать запрос (float)1": {
+      "main": [
+        [
+          {
+            "node": "Qdrant search1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant search1": {
+      "main": [
+        [
+          {
+            "node": "Достать текст1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Получить токен GigaChat1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Достать текст1": {
+      "main": [
+        [
+          {
+            "node": "Return",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "LD5KNIL6N16rH7eE",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "e6b87581-25e6-48fb-b0ca-9d82d3bc67c2",
+  "meta": {
+    "instanceId": "21e5194fb4548d766b96ebd333779b8063508b9c6aadeed69cb0d8bbe7d15985"
+  },
+  "nodeGroups": [],
+  "id": "pPGS4itUzm8dMt1n",
+  "tags": []
+}

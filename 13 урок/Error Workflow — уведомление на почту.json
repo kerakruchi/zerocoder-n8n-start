@@ -1,0 +1,83 @@
+{
+  "name": "Error Workflow — уведомление на почту",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🚨 Error Workflow — единый обработчик ошибок\n\nЛовит сбой ЛЮБОГО сценария, к которому он привязан, и шлёт письмо: какой сценарий, какая нода и с какой ошибкой упали.\n\n**Как подключить (один раз к каждому сценарию):**\nОткрой нужный сценарий → ⋯ (три точки вверху) → Settings → поле **Error Workflow** → выбери «Error Workflow — уведомление на почту». Сохрани. Теперь при любом сбое этого сценария сработает этот воркфлоу.\n\n**Как показать на демо («уронить» сценарий):**\nВ любом рабочем сценарии временно сломай ноду — например, в HTTP-ноде впиши неверный URL, или в Code-ноде добавь строку `throw new Error('тест ошибки');`. Запусти сценарий → он упадёт → на почту придёт уведомление.\n\n📧 Письмо уходит через credential «Yandex SMTP — моя почта» (взято из сценария с заявками). Получатель — тот же ящик; поменяй To, если нужно слать на другой адрес.",
+        "height": 692,
+        "width": 420,
+        "color": 3
+      },
+      "id": "f1994d50-42e7-4ecf-b0a2-599bbec5e1a6",
+      "name": "О Error Workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        -320
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "3778598c-cd74-4365-8d84-8cb416fbabce",
+      "name": "При ошибке сценария",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        224,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "valaria.kruchinina@yandex.ru",
+        "toEmail": "valaria.kruchinina@yandex.ru",
+        "subject": "=❌ Ошибка в сценарии: {{ $json.workflow.name }}",
+        "html": "=<h3>⚠️ Сбой в сценарии n8n</h3>\n<b>Сценарий:</b> {{ $json.workflow.name }} (id {{ $json.workflow.id }})<br>\n<b>Где сломалось (нода):</b> {{ $json.execution.lastNodeExecuted }}<br>\n<b>Что сломалось (ошибка):</b> {{ $json.execution.error.message }}<br>\n<b>Режим запуска:</b> {{ $json.execution.mode }}<br>\n<b>Execution:</b> <a href=\"{{ $json.execution.url }}\">{{ $json.execution.url }}</a><br>\n<hr>\n<small>Автоматическое уведомление Error Workflow.</small>",
+        "options": {}
+      },
+      "id": "41e50217-0dff-4298-8d12-ee91f7862b12",
+      "name": "Письмо об ошибке (Яндекс SMTP)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        464,
+        352
+      ],
+      "webhookId": "err-mail-webhook-0001",
+      "credentials": {
+        "smtp": {
+          "id": "uT5pSYnRHCIudCbC",
+          "name": "Yandex SMTP — моя почта"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "При ошибке сценария": {
+      "main": [
+        [
+          {
+            "node": "Письмо об ошибке (Яндекс SMTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "29046c88-f8f2-450c-8cec-ef696cebe294",
+  "meta": {
+    "instanceId": "21e5194fb4548d766b96ebd333779b8063508b9c6aadeed69cb0d8bbe7d15985"
+  },
+  "nodeGroups": [],
+  "id": "LD5KNIL6N16rH7eE",
+  "tags": []
+}

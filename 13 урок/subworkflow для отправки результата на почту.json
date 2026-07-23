@@ -1,0 +1,83 @@
+{
+  "name": "subworkflow для отправки результата на почту",
+  "nodes": [
+    {
+      "parameters": {
+        "fromEmail": "valaria.kruchinina@yandex.ru",
+        "toEmail": "valaria.kruchinina@yandex.ru",
+        "subject": "=Ответ ассистента: {{ $('Start').first().json.question_firstItem }}",
+        "html": "={{ $json.text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        10240,
+        4640
+      ],
+      "id": "f4d1c92d-5f26-4f40-8a08-5a6501f06873",
+      "name": "Письмо с ответом (Яндекс SMTP)",
+      "webhookId": "main-mail-webhook-01",
+      "credentials": {
+        "smtp": {
+          "id": "uT5pSYnRHCIudCbC",
+          "name": "Yandex SMTP — моя почта"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "question_firstItem",
+              "type": "any"
+            },
+            {
+              "name": "text",
+              "type": "any"
+            }
+          ]
+        }
+      },
+      "id": "463f95f0-7326-441e-970a-2fac5e1371f7",
+      "typeVersion": 1.1,
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        10032,
+        4640
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Письмо с ответом (Яндекс SMTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "LD5KNIL6N16rH7eE",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "d6722f2d-1ac7-41ef-9866-23ca616d2b0f",
+  "meta": {
+    "instanceId": "21e5194fb4548d766b96ebd333779b8063508b9c6aadeed69cb0d8bbe7d15985"
+  },
+  "nodeGroups": [],
+  "id": "EuuMBL4m7faOHFMm",
+  "tags": []
+}
