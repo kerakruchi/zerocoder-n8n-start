@@ -1,0 +1,301 @@
+{
+  "name": "Основной сценарий — вопрос, поиск, ответ",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        8096,
+        4544
+      ],
+      "id": "86f4d23d-0594-4998-857e-ddb71b496411",
+      "name": "Чат: вопрос",
+      "webhookId": "a1b2c3d4-e5f6-47a8-9b0c-1d2e3f4a5b6c"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Вопрос клиента:\n{{ $('Вопрос').first().json.question }}\n\nБаза знаний (найдено по вопросу):\n{{ $json.response }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Ты — ассистент компании по аренде кабриолетов.\n\nОтвечай на вопрос клиента, используя ТОЛЬКО информацию из блока «База знаний» ниже.\n\nПравила:\n• Отвечай по-русски, на «вы», кратко — 1–3 предложения, только по сути вопроса.\n• НИКОГДА не выдумывай цифры, суммы, сроки и правила — только то, что есть в базе.\n• Если в базе нет ответа — честно скажи, что нужно уточнить у специалиста.\n• Не пересказывай весь документ и не упоминай саму базу знаний — пиши клиенту как живой оператор."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        8768,
+        4640
+      ],
+      "id": "41301629-ffa3-4bf7-ac6e-bcab59ec2784",
+      "name": "Ответ LLM"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        8848,
+        4864
+      ],
+      "id": "865a220d-7a6f-4982-8969-4db1c7915858",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "6eFnROHtjX1mJTar",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "q1",
+              "name": "question",
+              "value": "={{ $json.chatInput || 'условия аренды' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        8320,
+        4640
+      ],
+      "id": "1f41aeca-3520-47c2-8904-17f51f7f67ce",
+      "name": "Вопрос"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        8096,
+        4736
+      ],
+      "id": "df41e35f-bd06-4426-8ab0-f39ba3fb6824",
+      "name": "Расписание (раз в день 09:00)"
+    },
+    {
+      "parameters": {
+        "content": "## Основной сценарий: вопрос → поиск → ответ\n\nДва входа: чат и расписание. Нода «Вопрос» берёт текст из чата, а по расписанию подставляет фиксированный вопрос.\n\nДалее: токен GigaChat → вопрос в вектор (embeddings) → поиск в Qdrant → достаём текст → LLM формулирует короткий ответ.\n\n▶️ Проверка: Open Chat, задать вопрос. Или включить Active — сработает раз в день.\n🔐 Credentials: «Giga chat», «Qdrant», «OpenAI account».",
+        "height": 320,
+        "width": 380,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        7648,
+        4464
+      ],
+      "id": "7f312e1c-ed31-40af-8dfc-4ae9ecb02b9f",
+      "name": "О сценарии"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "pPGS4itUzm8dMt1n",
+          "mode": "list"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "question_firstItem": "={{ $('Вопрос').first().json.question }}"
+          },
+          "matchingColumns": [
+            "question_firstItem"
+          ],
+          "schema": [
+            {
+              "id": "question_firstItem",
+              "displayName": "question_firstItem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        8544,
+        4640
+      ],
+      "name": "Call subworkflow для обращения к базе",
+      "id": "af1c8de4-a2d9-4bfe-b1f5-bc5c5a6ef454"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "EuuMBL4m7faOHFMm",
+          "mode": "list"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "question_firstItem": "={{ $('Вопрос').first().json.question }}",
+            "text": "={{ $json.text }}"
+          },
+          "matchingColumns": [
+            "question_firstItem",
+            "text"
+          ],
+          "schema": [
+            {
+              "id": "question_firstItem",
+              "displayName": "question_firstItem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "text",
+              "displayName": "text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        9120,
+        4640
+      ],
+      "name": "Call subworkflow для отправки результата на почту",
+      "id": "5841889a-cf8d-4dea-be54-c8814098bb32"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Чат: вопрос": {
+      "main": [
+        [
+          {
+            "node": "Вопрос",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Расписание (раз в день 09:00)": {
+      "main": [
+        [
+          {
+            "node": "Вопрос",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Вопрос": {
+      "main": [
+        [
+          {
+            "node": "Call subworkflow для обращения к базе",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Ответ LLM",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ответ LLM": {
+      "main": [
+        [
+          {
+            "node": "Call subworkflow для отправки результата на почту",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call subworkflow для обращения к базе": {
+      "main": [
+        [
+          {
+            "node": "Ответ LLM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "LD5KNIL6N16rH7eE",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "db6a53ca-6e5f-4cd1-a198-21b707d97e14",
+  "meta": {
+    "instanceId": "21e5194fb4548d766b96ebd333779b8063508b9c6aadeed69cb0d8bbe7d15985"
+  },
+  "nodeGroups": [],
+  "id": "1exQ0BSVK74LzGv4",
+  "tags": []
+}
